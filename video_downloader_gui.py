@@ -10,6 +10,7 @@ import os
 import threading
 import time
 import re
+import subprocess
 from pathlib import Path
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QTextEdit, QLineEdit, QPushButton, 
@@ -17,7 +18,44 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QComboBox, QCheckBox, QGroupBox, QSplitter)
 from PyQt5.QtCore import QThread, pyqtSignal, Qt, QTimer
 from PyQt5.QtGui import QFont, QIcon, QTextCursor
+from PyQt5.QtWidgets import QApplication
 from video_downloader import VideoDownloader
+
+def set_application_icon(app_or_widget=None):
+    """
+    设置应用程序图标
+    
+    Args:
+        app_or_widget: QApplication实例或QWidget实例，如果为None则尝试获取当前应用
+    """
+    # 图标文件优先级列表
+    icon_candidates = [
+        "icon/app.png",
+        "image/logo.png", 
+        "image/logo-icon.png",
+        "image/down-icon.png",
+        "image/logomin.png"
+    ]
+    
+    icon_path = None
+    for candidate in icon_candidates:
+        path = Path(candidate)
+        if path.exists():
+            icon_path = path
+            break
+    
+    if icon_path:
+        icon = QIcon(str(icon_path))
+        if app_or_widget:
+            app_or_widget.setWindowIcon(icon)
+        else:
+            # 尝试获取当前应用实例
+            app = QApplication.instance()
+            if app:
+                app.setWindowIcon(icon)
+        print(f"已设置应用程序图标: {icon_path}")
+    else:
+        print("未找到可用的图标文件")
 
 class DownloadWorker(QThread):
     """下载工作线程"""
@@ -181,10 +219,10 @@ class VideoDownloaderGUI(QMainWindow):
     def init_ui(self):
         """初始化用户界面"""
         self.setWindowTitle("视频解析下载器 v1.0")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 900, 650)
         
-        # 设置窗口图标（如果有的话）
-        # self.setWindowIcon(QIcon('icon.png'))
+        # 设置窗口图标
+        set_application_icon(self)
         
         # 创建中央部件
         central_widget = QWidget()
@@ -193,24 +231,36 @@ class VideoDownloaderGUI(QMainWindow):
         # 创建主布局
         main_layout = QVBoxLayout(central_widget)
         
-        # 创建标题
-        title_label = QLabel("视频解析下载器")
-        title_label.setAlignment(Qt.AlignCenter)
-        title_label.setFont(QFont("Arial", 16, QFont.Bold))
-        title_label.setStyleSheet("color: #2c3e50; margin: 10px;")
-        main_layout.addWidget(title_label)
+        # # 创建标题
+        # title_label = QLabel("视频解析下载器")
+        # title_label.setAlignment(Qt.AlignCenter)
+        # title_label.setFont(QFont("Arial", 16, QFont.Bold))
+        # title_label.setStyleSheet("color: #2c3e50; margin: 10px;")
+        # main_layout.addWidget(title_label)
         
         # 创建输入区域
         input_group = QGroupBox("下载设置")
         input_layout = QVBoxLayout(input_group)
         
         # URL输入
-        url_layout = QHBoxLayout()
-        url_label = QLabel("视频链接:")
-        url_label.setMinimumWidth(80)
-        self.url_input = QLineEdit()
-        self.url_input.setPlaceholderText("请输入视频链接（支持抖音、B站、快手、小红书、YouTube等）")
-        url_layout.addWidget(url_label)
+        url_layout = QVBoxLayout()
+        self.url_input = QTextEdit()
+        self.url_input.setPlaceholderText("请输入视频链接（支持抖音、B站、快手、小红书、YouTube等）\n可以输入多个链接，每行一个")
+        self.url_input.setMaximumHeight(100)  # 限制高度，避免占用太多空间
+        self.url_input.setMinimumHeight(60)   # 设置最小高度
+        self.url_input.setStyleSheet("""
+            QTextEdit {
+                border: 2px solid #bdc3c7;
+                border-radius: 5px;
+                padding: 8px;
+                font-size: 12px;
+                background-color: #ffffff;
+            }
+            QTextEdit:focus {
+                border-color: #3498db;
+            }
+        """)
+
         url_layout.addWidget(self.url_input)
         input_layout.addLayout(url_layout)
         
@@ -231,6 +281,7 @@ class VideoDownloaderGUI(QMainWindow):
         self.dir_input = QLineEdit("downloads")
         self.dir_input.setReadOnly(True)
         self.browse_btn = QPushButton("浏览")
+        self.browse_btn.setToolTip("选择下载文件夹")
         self.browse_btn.clicked.connect(self.browse_directory)
         dir_layout.addWidget(dir_label)
         dir_layout.addWidget(self.dir_input)
@@ -243,6 +294,7 @@ class VideoDownloaderGUI(QMainWindow):
         button_layout = QHBoxLayout()
         
         self.download_btn = QPushButton("开始下载")
+        self.download_btn.setToolTip("开始下载视频文件")
         self.download_btn.setStyleSheet("""
             QPushButton {
                 background-color: #27ae60;
@@ -263,6 +315,7 @@ class VideoDownloaderGUI(QMainWindow):
         self.download_btn.clicked.connect(self.start_download)
         
         self.stop_btn = QPushButton("停止下载")
+        self.stop_btn.setToolTip("停止当前下载任务")
         self.stop_btn.setStyleSheet("""
             QPushButton {
                 background-color: #e74c3c;
@@ -284,6 +337,7 @@ class VideoDownloaderGUI(QMainWindow):
         self.stop_btn.setEnabled(False)
         
         self.clear_btn = QPushButton("清空日志")
+        self.clear_btn.setToolTip("清空下载日志")
         self.clear_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3498db;
@@ -299,9 +353,45 @@ class VideoDownloaderGUI(QMainWindow):
         """)
         self.clear_btn.clicked.connect(self.clear_log)
         
+        self.clear_input_btn = QPushButton("清空输入")
+        self.clear_input_btn.setToolTip("清空链接和Token输入框")
+        self.clear_input_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f39c12;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #e67e22;
+            }
+        """)
+        self.clear_input_btn.clicked.connect(self.clear_input)
+        
+        self.open_folder_btn = QPushButton("打开文件夹")
+        self.open_folder_btn.setToolTip("打开下载文件夹，查看已下载的文件")
+        self.open_folder_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #9b59b6;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #8e44ad;
+            }
+        """)
+        self.open_folder_btn.clicked.connect(self.open_download_folder)
+        
         button_layout.addWidget(self.download_btn)
         button_layout.addWidget(self.stop_btn)
         button_layout.addWidget(self.clear_btn)
+        button_layout.addWidget(self.clear_input_btn)
+        button_layout.addWidget(self.open_folder_btn)
         button_layout.addStretch()
         
         main_layout.addLayout(button_layout)
@@ -351,10 +441,21 @@ class VideoDownloaderGUI(QMainWindow):
             
     def start_download(self):
         """开始下载"""
-        url = self.url_input.text().strip()
-        if not url:
+        url_text = self.url_input.toPlainText().strip()
+        if not url_text:
             QMessageBox.warning(self, "警告", "请输入视频链接！")
             return
+            
+        # 处理多行输入，取第一个非空行作为下载链接
+        urls = [line.strip() for line in url_text.split('\n') if line.strip()]
+        if not urls:
+            QMessageBox.warning(self, "警告", "请输入有效的视频链接！")
+            return
+            
+        url = urls[0]  # 暂时只处理第一个链接，后续可以扩展为批量下载
+        if len(urls) > 1:
+            self.log_message(f"检测到多个链接，当前只处理第一个链接: {url}")
+            self.log_message(f"其他链接: {', '.join(urls[1:])}")
             
         # 禁用下载按钮，启用停止按钮
         self.download_btn.setEnabled(False)
@@ -405,7 +506,14 @@ class VideoDownloaderGUI(QMainWindow):
         if success:
             self.log_message(f"✅ {message}")
             self.statusBar().showMessage("下载完成")
-            QMessageBox.information(self, "成功", message)
+            
+            # 询问是否打开下载文件夹
+            reply = QMessageBox.question(self, "下载完成", 
+                                       f"{message}\n\n是否要打开下载文件夹？",
+                                       QMessageBox.Yes | QMessageBox.No,
+                                       QMessageBox.Yes)
+            if reply == QMessageBox.Yes:
+                self.open_download_folder()
         else:
             self.log_message(f"❌ {message}")
             self.statusBar().showMessage("下载失败")
@@ -468,6 +576,42 @@ class VideoDownloaderGUI(QMainWindow):
         self.log_text.clear()
         self.current_progress_line = None  # 重置进度行
         
+    def clear_input(self):
+        """清空输入框"""
+        self.url_input.clear()
+        self.token_input.clear()
+        
+    def open_download_folder(self):
+        """打开下载文件夹"""
+        try:
+            download_path = Path(self.dir_input.text())
+            if not download_path.exists():
+                # 如果文件夹不存在，创建它
+                download_path.mkdir(parents=True, exist_ok=True)
+                self.log_message(f"创建下载文件夹: {download_path}")
+            
+            # 根据操作系统打开文件夹
+            if sys.platform == "win32":
+                # Windows
+                subprocess.run(["explorer", str(download_path)], check=True)
+            elif sys.platform == "darwin":
+                # macOS
+                subprocess.run(["open", str(download_path)], check=True)
+            else:
+                # Linux
+                subprocess.run(["xdg-open", str(download_path)], check=True)
+                
+            self.log_message(f"已打开下载文件夹: {download_path}")
+            
+        except subprocess.CalledProcessError as e:
+            error_msg = f"无法打开文件夹: {e}"
+            self.log_message(f"❌ {error_msg}")
+            QMessageBox.warning(self, "错误", error_msg)
+        except Exception as e:
+            error_msg = f"打开文件夹时出现错误: {e}"
+            self.log_message(f"❌ {error_msg}")
+            QMessageBox.warning(self, "错误", error_msg)
+        
     def closeEvent(self, event):
         """窗口关闭事件"""
         if self.download_worker and self.download_worker.isRunning():
@@ -491,6 +635,9 @@ def main():
     app.setApplicationName("视频解析下载器")
     app.setApplicationVersion("1.0")
     app.setOrganizationName("VideoDownloader")
+    
+    # 设置应用程序图标
+    set_application_icon(app)
     
     # 创建主窗口
     window = VideoDownloaderGUI()
