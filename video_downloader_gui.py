@@ -16,8 +16,8 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QTextEdit, QLineEdit, QPushButton, 
                              QLabel, QProgressBar, QFileDialog, QMessageBox,
                              QComboBox, QCheckBox, QGroupBox, QSplitter)
-from PyQt5.QtCore import QThread, pyqtSignal, Qt, QTimer
-from PyQt5.QtGui import QFont, QIcon, QTextCursor
+from PyQt5.QtCore import QThread, pyqtSignal, Qt, QTimer, QPoint
+from PyQt5.QtGui import QFont, QIcon, QTextCursor, QMouseEvent
 from PyQt5.QtWidgets import QApplication
 from video_downloader import VideoDownloader
 
@@ -214,6 +214,8 @@ class VideoDownloaderGUI(QMainWindow):
         super().__init__()
         self.download_worker = None
         self.current_progress_line = None  # 当前进度行
+        self.dragging = False  # 是否正在拖动窗口
+        self.drag_position = QPoint()  # 拖动起始位置
         self.init_ui()
         
     def init_ui(self):
@@ -427,6 +429,9 @@ class VideoDownloaderGUI(QMainWindow):
         # 初始化下载目录
         self.init_download_dir()
         
+        # 设置鼠标追踪，用于检测鼠标移动
+        self.setMouseTracking(True)
+        
     def init_download_dir(self):
         """初始化下载目录"""
         download_dir = Path("downloads")
@@ -507,13 +512,13 @@ class VideoDownloaderGUI(QMainWindow):
             self.log_message(f"✅ {message}")
             self.statusBar().showMessage("下载完成")
             
-            # 询问是否打开下载文件夹
-            reply = QMessageBox.question(self, "下载完成", 
-                                       f"{message}\n\n是否要打开下载文件夹？",
-                                       QMessageBox.Yes | QMessageBox.No,
-                                       QMessageBox.Yes)
-            if reply == QMessageBox.Yes:
-                self.open_download_folder()
+            # # 询问是否打开下载文件夹
+            # reply = QMessageBox.question(self, "下载完成", 
+            #                            f"{message}\n\n是否要打开下载文件夹？",
+            #                            QMessageBox.Yes | QMessageBox.No,
+            #                            QMessageBox.Yes)
+            # if reply == QMessageBox.Yes:
+            #     self.open_download_folder()
         else:
             self.log_message(f"❌ {message}")
             self.statusBar().showMessage("下载失败")
@@ -590,16 +595,7 @@ class VideoDownloaderGUI(QMainWindow):
                 download_path.mkdir(parents=True, exist_ok=True)
                 self.log_message(f"创建下载文件夹: {download_path}")
             
-            # 根据操作系统打开文件夹
-            if sys.platform == "win32":
-                # Windows
-                subprocess.run(["explorer", str(download_path)], check=True)
-            elif sys.platform == "darwin":
-                # macOS
-                subprocess.run(["open", str(download_path)], check=True)
-            else:
-                # Linux
-                subprocess.run(["xdg-open", str(download_path)], check=True)
+            os.startfile(download_path)
                 
             self.log_message(f"已打开下载文件夹: {download_path}")
             
@@ -626,6 +622,86 @@ class VideoDownloaderGUI(QMainWindow):
                 event.ignore()
         else:
             event.accept()
+    
+    def mousePressEvent(self, event: QMouseEvent):
+        """
+        鼠标按下事件
+        在非控件区域按下鼠标左键时开始拖动窗口
+        """
+        if event.button() == Qt.LeftButton:
+            # 检查点击位置是否在控件上
+            child_widget = self.childAt(event.pos())
+            if child_widget is None or not self._is_clickable_widget(child_widget):
+                # 在非控件区域点击，开始拖动
+                self.dragging = True
+                self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
+                event.accept()
+            else:
+                # 在控件上点击，不处理拖动
+                event.ignore()
+        else:
+            event.ignore()
+    
+    def mouseMoveEvent(self, event: QMouseEvent):
+        """
+        鼠标移动事件
+        在拖动状态下移动窗口
+        """
+        if self.dragging and event.buttons() & Qt.LeftButton:
+            # 计算新位置并移动窗口
+            new_pos = event.globalPos() - self.drag_position
+            self.move(new_pos)
+            event.accept()
+        else:
+            event.ignore()
+    
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        """
+        鼠标释放事件
+        停止拖动
+        """
+        if event.button() == Qt.LeftButton:
+            self.dragging = False
+            event.accept()
+        else:
+            event.ignore()
+    
+    def _is_clickable_widget(self, widget):
+        """
+        判断是否为可点击的控件
+        
+        Args:
+            widget: 要检查的控件
+            
+        Returns:
+            bool: 是否为可点击控件
+        """
+        # 定义可点击的控件类型
+        clickable_types = [
+            'QPushButton', 'QLineEdit', 'QTextEdit', 'QComboBox', 
+            'QCheckBox', 'QProgressBar', 'QGroupBox', 'QLabel'
+        ]
+        
+        widget_type = type(widget).__name__
+        
+        # 检查控件类型
+        if widget_type in clickable_types:
+            return True
+        
+        # 检查控件是否启用
+        if hasattr(widget, 'isEnabled') and not widget.isEnabled():
+            return False
+        
+        # 检查控件是否可见
+        if hasattr(widget, 'isVisible') and not widget.isVisible():
+            return False
+        
+        # 对于QLabel，检查是否有文本或图片（可点击的标签）
+        if widget_type == 'QLabel':
+            if widget.text().strip() or widget.pixmap():
+                return True
+        
+        return False
 
 def main():
     """主函数"""
