@@ -1,0 +1,27 @@
+/* 公告栏样式 */
+#announcement-bar {
+    width: 100%;
+    background-color: #ffcc00; /* 背景颜色 */
+    color: #000; /* 文字颜色 */
+    text-align: center;
+    padding: 10px 0;
+    font-size: 14px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000; /* 确保公告栏在最上层 */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 添加阴影效果 */
+}
+
+#announcement-content {
+    display: inline-block;
+    position: relative;
+}
+
+#announcement-content span {
+    display: none;
+}
+
+#announcement-content span:first-child {
+    display: inline-block;
+}

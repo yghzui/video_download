@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="renderer" content="webkit">
+    <meta name="referrer" content="same-origin">
+    <!--    <meta name="referrer" content="strict-origin-when-cross-origin">-->
+    <meta name="viewport"
+          content="width=device-width,initial-scale=1.0,user-scalable=no,maximum-scale=1,viewport-fit=cover">
+    <title>免费视频解析下载_抖音，B站(哔哩哔哩)视频解析下载工具 - Best Video下载器</title>
+    <meta name="keywords" content="视频解析,视频免费下载工具,抖音视频下载,B站视频下载">
+    <meta name="description"
+          content="Best Video下载器是一款功能强大且免费的视频解析下载工具，支持全球100+热门视频平台视频高清无水印下载，包括哔哩哔哩、抖音、快手、微博、小红书、TikTok、YouTube等。Best Video下载器无需注册，操作简单，下载速度快，是视频下载搬运的理想选择。">
+    <meta name="applicable-device" content="pc,mobile"/>
+    <meta http-equiv="Cache-Control" content="no-transform"/>
+    <link rel="shortcut icon" href="https://www.bestvideow.com/image/logomin.png" type="image/x-icon">
+    <link rel='dns-prefetch' href='//www.bestvideow.com'/>
+
+
+    <!-- 新 Bootstrap5 核心 CSS 文件 -->
+    <link rel="stylesheet" href="https://www.bestvideow.com/css/bootstrap-5.1.1.min.css">
+
+    <link rel="stylesheet" href="https://www.bestvideow.com/css/login_index.css?v=1.1.3">
+    <link rel="stylesheet" href="./css/itshiye.css?v=1.1.3">
+    <link rel="stylesheet" href="https://www.bestvideow.com/css/notify.css?v=1.1.3">
+    <link rel="stylesheet" href="https://www.bestvideow.com/css/loginRegister.css?v=1.1.3">
+
+
+</head>
+
+<body class="bg-light">
+
+<!-- 公告栏 -->
+<!-- <div id="announcement-bar">
+    <div id="announcement-content">
+        <span>Facebook、推特(Twitter)解析上线了，输入链接解析吧！</span>
+        <span>下载狗客户端上线了，<a href="https://www.bestvideow.com/main/clientDownload.html" target="_blank">查看详情</a>！</span>
+    </div>
+</div> -->
+
+<div id="content">
+    <!--导航栏-->
+    <nav class="navbar navbar-expand-lg bg-body-tertiary bg-white" id="navigation">
+        <div class="container-fluid container index_con">
+
+            <!-- Logo部分 -->
+            <a class="navbar-brand" href="https://www.bestvideow.com/" id="logoLink">
+                <!-- <h1 width="140px"class="d-inline-block align-top">Best Video</h1> -->
+                <img src="https://www.bestvideow.com/image/logo-icon.png" alt="Logo" width="190px"
+                     class="d-inline-block align-top">
+            </a>
+
+            <!-- 导航栏按钮，用于小屏幕设备 -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="bi bi-list"><i class="bi bi-bank">菜单</i></span>
+            </button>
+
+            <!-- 导航链接 -->
+            <div class="collapse navbar-collapse ms-4 bg-white nav_tab mobile_nav" id="navbarNav">
+                <ul class="navbar-nav" id="navigationUl">
+
+                </ul>
+
+                <ul class="navbar-nav ml-auto" style="align-items: center;">
+                    <li class="nav-item language-item dropdown">
+                        <!-- https://www.bestvideow.com/ -->
+                        <a class="nav-link  dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                           aria-expanded="false" data-i18n="nav.column">视频下载</a>
+                        <ul class="dropdown-menu">
+                            <li style="text-align: center;"><a class="dropdown-item"
+                                                               href="https://www.bestvideow.com/blbl" target="_blank">哔哩哔哩</a>
+                            </li>
+                            <li style="text-align: center;"><a class="dropdown-item"
+                                                               href="https://www.bestvideow.com/dy"
+                                                               target="_blank">抖音</a></li>
+                            <li style="text-align: center;"><a class="dropdown-item"
+                                                               href="https://www.bestvideow.com/weishi" target="_blank">微视视频</a>
+                            </li>
+                            <!--                            <li style="text-align: center;"><a class="dropdown-item"-->
+                            <!--                                                               href="https://www.bestvideow.com/ks"-->
+                            <!--                                                               target="_blank">快手</a></li>-->
+                            <li style="text-align: center;"><a class="dropdown-item"
+                                                               href="https://www.bestvideow.com/tiktok" target="_blank">Tik
+                                Tok</a></li>
+                            <li style="text-align: center;"><a class="dropdown-item"
+                                                               href="https://www.bestvideow.com/ks"
+                                                               target="_blank">快手</a></li>
+                            <li style="text-align: center;"><a class="dropdown-item"
+                                                               href="https://www.bestvideow.com/xigua" target="_blank">西瓜视频</a>
+                            </li>
+                            <li style="text-align: center;"><a class="dropdown-item"
+                                                               href="https://www.bestvideow.com/xhs"
+                                                               target="_blank">小红书</a></li>
+                            <!--                            <li style="text-align: center;"><a class="dropdown-item"-->
+                            <!--                                                               href="https://www.bestvideow.com/ppx"-->
+                            <!--                                                               target="_blank">皮皮虾</a></li>-->
+                            <li style="text-align: center;"><a class="dropdown-item"
+                                                               href="https://www.bestvideow.com/ytb"
+                                                               target="_blank">YouTube</a></li>
+                            <!--                            <li style="text-align: center;"><a class="dropdown-item"-->
+                            <!--                                                               href="https://www.bestvideow.com/haokan" target="_blank">好看视频</a>-->
+                            <!--                            </li>-->
+                            <li style="text-align: center;"><a class="dropdown-item"
+                                                               href="https://www.bestvideow.com/weibo" target="_blank">微博</a>
+                                <!--                            </li>-->
+                                <!--                            <li style="text-align: center;"><a class="dropdown-item"-->
+                                <!--                                                               href="https://www.bestvideow.com/jd"-->
+                                <!--                                                               target="_blank">京东</a></li>-->
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="https://www.bestvideow.com/template/tutorial.html"
+                           target="_blank" data-i18n="nav.usingTutorials">使用教程</a>
+                    </li>
+                    <!--                    <li class="nav-item login-register d-none">-->
+                    <!--                        <a class="nav-link loginModal" href="#" style="padding: 0 !important;"><button class="btn btn-primary" style="border-radius: 20px;" data-i18n="nav.Login">登录</button></a>-->
+                    <!--                    </li>-->
+                    <li class="nav-item language-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                           aria-expanded="false">
+                            Language
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-lang="zh-CN"
+                                   onclick="changeLanguage('zh-CN')">中文</a></li>
+                            <li><a class="dropdown-item" href="#" data-lang="en-US" onclick="changeLanguage('en-US')">English</a>
+                            </li>
+                        </ul>
+                    </li>
+                    <!-- <li class="nav-item login-register d-none"> -->
+                    <!-- <a class="nav-link" href="https://www.bestvideow.com/main/register.html"
+                        target="_blank">注册</a> -->
+                    <!-- <a class="nav-link registerModal" href="#">注册</a> -->
+                    <!-- </li> -->
+                    <li class="nav-item dropdown d-none" id="user-main">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                           aria-expanded="false">
+                            <span id="user-name"></span>
+                        </a>
+                        <ul class="dropdown-menu" id="nav-drop-down">
+                            <li><a class="dropdown-item" target="_blank"
+                                   href="https://www.bestvideow.com/main/center.html"
+                                   data-i18n="nav.myCenter">个人中心</a></li>
+                            <li><a class="dropdown-item" href="#" id="sign-out" data-i18n="nav.logout">退出登录</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+        </div>
+    </nav>
+
+    <!--工具列表-->
+    <div class="pt-0 main-container">
+        <div class="container">
+
+
+            <div class="row" id="logo">
+                <div class="col-12 text-center">
+                    <div class="logo-title" data-i18n="content.welcome">Best Video下载器</div>
+                </div>
+                <div class="inner-title text-center" data-i18n="content.main">免费使用，高效便捷，一键极速下载</div>
+            </div>
+
+
+            <div class="row">
+                <div class="col-12 url-search-box">
+                    <div class="input-group" id="urlDiv">
+                        <img class="jx-icon" src="https://www.bestvideow.com/image/jx-icon.png" alt="">
+                        <input type="text" id="urlInput" class="form-control" maxlength="800"
+                               placeholder="请输入您的解析链接" aria-label="Recipient's username"
+                               aria-describedby="button-addon2">
+                        <button class="btn btn-primary jx-btn" id="downloadButton"
+                                onclick="parseLink()" data-i18n="content.analysisButton">解析
+                        </button>
+                        <!-- <button class="btn btn-outline-secondary" type="button" id="button-addon2"
+                                onclick="clearInput()">清空
+                        </button> -->
+                    </div>
+                </div>
+                <div class="row  mt-4" id="downloadArea" style="display: none">
+                    <div class="col-12 text-center" id="chooseButton">
+                        <button id="toggleButton" class="btn btn-success">取消全选</button>
+                        <!--                    <button id="downloadHdLink" class="btn btn-success ms-1 me-1 mt-2">下载高清</button>-->
+                        <button id="downloadLink" class="btn btn-success ms-1" target="_blank"
+                                referrerpolicy="no-referrer" download>下载
+                        </button>
+                        <button id="compressedDownload" class="btn btn-success ms-1">压缩下载</button>
+                        <!--                    <a id="downloadAllFile" class="btn btn-success" target="_blank"  referrerpolicy="no-referrer"  onclick="downloadAllFile()" download>下载</a>-->
+                        <button class="btn btn-success ms-1" id="downloadClear">重新解析</button>
+                    </div>
+                </div>
+                <div class="col-12" style="color: red;display: none;" id="inputPrompt">
+                    <span data-i18n="content.errorText">解析失败，请重试并检查链接是否有效&emsp;查看&nbsp;</span>
+                    <a href="https://www.bestvideow.com/template/tutorial.html" target="_blank"
+                       data-i18n="nav.usingTutorials">使用教程</a>
+                </div>
+                <div class="col-12 text-center mt-3" id="waitAnimation" style="display: none">
+                    <div class="spinner-border text-info" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <span id="promptText">解析中，请稍后……</span>
+                </div>
+
+                <div class="col-12 text-center mt-3" id="downloadProgress" style="display: none">
+                    <div class="col-12">
+                        <div class="progress" role="progressbar" aria-label="Animated striped example"
+                             aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        下载速度: <span id="downloadSpeed">0 MB/s</span>
+                    </div>
+
+                </div>
+
+                <div class="col-12 text-center mt-3" id="downloadSuccess" style="display: none">
+                    <i class="bi bi-check-circle text-success" id="successIcon"></i>
+                    <span class="ms-2">下载成功！</span>
+                </div>
+
+                <div class="col-12 text-center mt-3" id="downloadFail" style="display: none">
+                    <i class="bi bi-x-lg text-danger" id="failIcon"></i>
+                    <span class="ms-2">下载失败，请重试！</span>
+                </div>
+
+                <div class="mt-2" id="preview">
+                    <div class="container" id="results-display">
+                        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-2 g-lg-3"
+                             id="set-list-preview">
+
+
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="network-content">
+                    <div class="container">
+                        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-4 g-2 g-lg-3 set-list">
+
+                            <div class="col-6 mt-0" style="padding:1.375rem 1.125rem 0">
+                                <div class="p-3 fl-jus-center bg-fff">
+                                    <div class="nw-icon-wrapper">
+                                        <a href="https://www.bestvideow.com/blbl">
+                                            <img class="nw-icon" src="https://www.bestvideow.com/image/blbl-icon.png"
+                                                 alt="哔哩哔哩解析">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mt-0" style="padding:1.375rem 1.125rem 0">
+                                <div class="p-3 fl-jus-center bg-fff">
+                                    <div class="nw-icon-wrapper">
+                                        <a href="https://www.bestvideow.com/dy">
+                                            <img class="nw-icon" src="https://www.bestvideow.com/image/dy-icon.png"
+                                                 alt="抖音解析">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mt-0" style="padding:1.375rem 1.125rem 0">
+                                <div class="p-3 fl-jus-center bg-fff">
+                                    <div class="nw-icon-wrapper">
+                                        <a href="https://www.bestvideow.com/xhs">
+                                            <img class="nw-icon" src="https://www.bestvideow.com/image/xhs-icon.png"
+                                                 alt="小红书解析">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mt-0" style="padding:1.375rem 1.125rem 0">
+                                <div class="p-3 fl-jus-center bg-fff">
+                                    <div class="nw-icon-wrapper">
+                                        <a href="https://www.bestvideow.com/ks">
+                                            <img class="nw-icon" src="https://www.bestvideow.com/image/ks-icon.png"
+                                                 alt="快手解析">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mt-0" style="padding:1.375rem 1.125rem 0">
+                                <div class="p-3 fl-jus-center bg-fff">
+                                    <div class="nw-icon-wrapper">
+                                        <a href="https://www.bestvideow.com/tiktok">
+                                            <img class="nw-icon" src="https://www.bestvideow.com/image/tt-icon.png"
+                                                 alt="Tik Tok解析">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mt-0" style="padding:1.375rem 1.125rem 0">
+                                <div class="p-3 fl-jus-center bg-fff">
+                                    <div class="nw-icon-wrapper">
+                                        <a href="https://www.bestvideow.com/ytb">
+                                            <img class="nw-icon" src="https://www.bestvideow.com/image/yt-icon.png"
+                                                 alt="YouTube解析">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-6 mt-0" style="padding:1.375rem 1.125rem 0">
+                                <div class="p-3 fl-jus-center bg-fff">
+                                    <div class="nw-icon-wrapper">
+                                        <a href="https://www.bestvideow.com/weibo">
+                                            <img class="nw-icon" src="https://www.bestvideow.com/image/wb-icon.png"
+                                                 alt="微博解析">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mt-0" style="padding:1.375rem 1.125rem 0">
+                                <div class="p-3 fl-jus-center bg-fff">
+                                    <div class="nw-icon-wrapper">
+                                        <a href="https://www.bestvideow.com/ppx">
+                                            <img class="nw-icon" src="https://www.bestvideow.com/image/ppx-icon.png"
+                                                 alt="皮皮虾解析">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-6 mt-0" style="padding:1.375rem 1.125rem 0">
+                                <div class="p-3 fl-jus-center bg-fff">
+                                    <div class="nw-icon-wrapper">
+                                        <a href="https://www.bestvideow.com/xigua">
+                                            <img class="nw-icon" src="https://www.bestvideow.com/image/xgsp-icon.png"
+                                                 alt="西瓜视频解析">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mt-0" style="padding:1.375rem 1.125rem 0">
+                                <div class="p-3 fl-jus-center bg-fff">
+                                    <div class="nw-icon-wrapper">
+                                        <a href="https://www.bestvideow.com/haokan">
+                                            <img class="nw-icon" src="https://www.bestvideow.com/image/hksp-icon.png"
+                                                 alt="好看视频解析">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-6 mt-0" style="padding:1.375rem 1.125rem 0">
+                                <div class="p-3 fl-jus-center bg-fff">
+                                    <div class="nw-icon-wrapper">
+                                        <a href="https://www.bestvideow.com/weishi">
+                                            <img class="nw-icon" src="https://www.bestvideow.com/image/wssp-icon.png"
+                                                 alt="微视视频解析">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mt-0" style="padding:1.375rem 1.125rem 0">
+                                <div class="p-3 fl-jus-center bg-fff">
+                                    <div class="nw-icon-wrapper">
+                                        <a href="https://www.bestvideow.com/jd">
+                                            <img class="nw-icon" src="https://www.bestvideow.com/image/jd-icon.png"
+                                                 alt="京东解析">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mt-0" style="padding:1.375rem 1.125rem 0;display: none">
+                                <div class="p-3 fl-jus-center bg-fff">
+                                    <div class="nw-icon-wrapper">
+                                        <a href="https://www.bestvideow.com/facebook">
+                                            <img class="nw-icon" src="https://www.bestvideow.com/image/wb-icon.png"
+                                                 alt="Facebook解析">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-6 mt-0" style="padding:1.375rem 1.125rem 0;display: none">
+                                <div class="p-3 fl-jus-center bg-fff">
+                                    <div class="nw-icon-wrapper">
+                                        <a href="https://www.bestvideow.com/instagram">
+                                            <img class="nw-icon" src="https://www.bestvideow.com/image/wb-icon.png"
+                                                 alt="Instagram解析">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-6 mt-0" style="padding:1.375rem 1.125rem 0;display: none">
+                                <div class="p-3 fl-jus-center bg-fff">
+                                    <div class="nw-icon-wrapper">
+                                        <a href="https://www.bestvideow.com/twitter">
+                                            <img class="nw-icon" src="https://www.bestvideow.com/image/wb-icon.png"
+                                                 alt="twitter解析">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+
+            <div class="row" id="freqAaskedQuest">
+                <div class="col-24 text-center mb-4">
+                    <h1 class="freq-asked-quest" data-i18n="nav.commonQuestions">常见问题</h1>
+                    <div class="tip" data-i18n="content.commonQuestionsText">
+                        您在使用过程中可能会遇到问题，在这里找找想要的答案
+                    </div>
+                </div>
+                <div class="row text-center"
+                     style="justify-content: center;margin-top:2.3125rem;padding:0;margin-bottom:6.0rem; margin-left: 0px;margin-right:0px;">
+                    <div class="col-24 text-center mb-4" style="padding:0">
+                        <div class="container">
+                            <ul class="quest-content row  row-cols-1 row-cols-md-3 row-cols-lg-3 row-cols-xl-3 g-2 g-lg-3">
+                                <li class="quest-item">
+                                    <!-- <div class="quest-item"> -->
+                                    <div class="quest">
+                                        <div class="title">
+                                            <img class="quest-icon" src="https://www.bestvideow.com/image/one-icon.png"
+                                                 alt="">
+                                            <span data-i18n="content.downloadBulk">支持哪些平台解析下载?</span>
+                                        </div>
+                                        <div class="descript" data-i18n="content.downloadBulkText">
+                                            支持包括哔哩哔哩、抖音、快手、微博、小红书、TikTok、YouTube、Facebook等全球100+热门平台的视频解析。
+                                        </div>
+                                    </div>
+                                    <!-- </div> -->
+                                </li>
+                                <li class="quest-item">
+                                    <!-- <div class="quest-item"> -->
+                                    <div class="quest">
+                                        <div class="title">
+                                            <img class="quest-icon"
+                                                 src="https://www.bestvideow.com/image/second-icon.png" alt="">
+                                            <span data-i18n="content.trial">可以在哪些设备使用?</span>
+                                        </div>
+                                        <div class="descript" data-i18n="content.trialText">
+                                            目前支持电脑(Windows、MacOS)设备、手机(IOS、Android)设备和平板电脑。推荐在谷歌(Chrome)浏览器使用，体验最佳。
+                                        </div>
+                                    </div>
+                                    <!-- </div> -->
+                                </li>
+                                <li class="quest-item">
+                                    <!-- <div class="quest-item"> -->
+                                    <div class="quest">
+                                        <div class="title">
+                                            <img class="quest-icon"
+                                                 src="https://www.bestvideow.com/image/third-icon.png" alt="">
+                                            <span data-i18n="content.platforms">视频下载的清晰度如何?</span>
+                                        </div>
+                                        <div class="descript" data-i18n="content.platformsText">
+                                            默认支持最高清晰度视频下载，除个别平台外。95%以上平台支持原视频下载。
+                                        </div>
+                                    </div>
+                                    <!-- </div> -->
+                                </li>
+                                <li class="quest-item">
+                                    <!-- <div class="quest-item"> -->
+                                    <div class="quest">
+                                        <div class="title">
+                                            <img class="quest-icon"
+                                                 src="https://www.bestvideow.com/image/fourth-icon.png" alt="">
+                                            <span data-i18n="content.payment">网站需要付费使用吗？</span>
+                                        </div>
+                                        <div class="descript" data-i18n="content.paymentText">
+                                            本网站所有功能，均可以免费使用;我们不会向您收取任何费用!
+                                        </div>
+                                    </div>
+                                    <!-- </div> -->
+                                </li>
+                                <li class="quest-item">
+                                    <!-- <div class="quest-item"> -->
+                                    <div class="quest">
+                                        <div class="title">
+                                            <img class="quest-icon"
+                                                 src="https://www.bestvideow.com/image/fifth-icon.png" alt="">
+                                            <span data-i18n="content.parsingFails">碰见链接解析失败怎么办?</span>
+                                        </div>
+                                        <div class="descript" data-i18n="content.parsingFailsText">
+                                            首先确认解析链接是否为有效链接，然后确认平台是否设置权限。测试阶段，目前网站仅支持80%左右的有效链接解析。
+                                        </div>
+                                    </div>
+                                    <!-- </div> -->
+                                </li>
+                                <li class="quest-item">
+                                    <!-- <div class="quest-item"> -->
+                                    <div class="quest">
+                                        <div class="title">
+                                            <img class="quest-icon"
+                                                 src="https://www.bestvideow.com/image/sixth-icon.png" alt="">
+                                            <span data-i18n="content.cannotPlay">下载的视频打不开怎么办?</span>
+                                        </div>
+                                        <div class="descript" data-i18n="content.cannotPlayText">
+                                            极个别下载的视频会出现打不开的情况，检查视频后缀是否是MP4格式。不是的话，可以手动修改后缀为MP4。
+                                        </div>
+                                    </div>
+                                    <!-- </div> -->
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        </div>
+        <footer class="bg-light text-light text-center py-3">
+
+            <div class="container mt-4 mb-4 footerArea" id="footerArea">
+                <p style="margin-bottom: 0px;color:#64748B" data-i18n="footer.belong">视频归相关网站及作者所有，本站不存储任何视频及图片，仅供个人学习使用
+                    Copyright @2025
+                    <a href="https://www.bestvideow.com/">Best Video下载器</a></p>
+            </div>
+        </footer>
+    </div>
+</div>
+
+<!-- 提示用的弹框 -->
+<div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+     aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="staticBackdropLabel">提示</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body prompt-content">
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary">确认</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 登陆弹框 -->
+<div class="login_cover" id="login_cover">
+    <div class="login_pannel">
+        <div class="title_blue">
+            <p data-i18n="login.wait">汪汪~终于等到你啦~</p>
+            <img class="dog" src="https://www.bestvideow.com/image/login/login_dog.png" alt="">
+            <img id="cancel_icon" class="cancel" src="https://www.bestvideow.com/image/login/cancel.png"
+                 alt="">
+        </div>
+        <!-- 登录 -->
+        <div class="input_area login_area" id="login_area">
+            <div class="title_text">
+                <p data-i18n="login.enjoy">登录可享更多权益</p>
+            </div>
+            <ul>
+                <li>
+                    <div class="input_contain">
+                        <img src="https://www.bestvideow.com/image/login/user_icon.png" alt=""> <input
+                            type="text" id="account"
+                            placeholder="请输入邮箱/手机号码">
+                    </div>
+
+                </li>
+                <li>
+                    <div class="input_contain">
+                        <img src="https://www.bestvideow.com/image/login/password_icon.png" alt=""><input
+                            type="password"
+                            id="password" placeholder="请输入密码">
+                        <div>
+                            <img class="pwd_visible eye_on" id="eye_on"
+                                 src="https://www.bestvideow.com/image/login/eye_on.png"
+                                 alt="">
+                            <img class="pwd_visible eye_down" id="eye_down"
+                                 src="https://www.bestvideow.com/image/login/eye_down.png" alt="">
+                        </div>
+
+                    </div>
+                </li>
+                <li>
+                    <div class="input_contain last">
+                        <img src="https://www.bestvideow.com/image/login/verifyCode_icon.png" alt=""><input
+                            type="text" id="imgCode"
+                            placeholder="请输入图形验证码">
+                    </div>
+                    <!-- 图形验证码 -->
+                    <img class="verifyImg" id="verifyImg" src="" alt="">
+                </li>
+            </ul>
+            <button class="get_login" id="get_login" data-i18n="login.login">登录</button>
+            <div class="setting">
+                <span class="register" id="to_register" data-i18n="login.register">注册账号</span>
+                <span class="forgetPWD" id="forgetPWD" data-i18n="login.forgetPassword">忘记密码</span>
+            </div>
+        </div>
+        <!-- 注册 -->
+        <div class="input_area register_area" id="register_area">
+
+            <ul>
+                <li>
+                    <div class="input_contain">
+                        <img src="https://www.bestvideow.com/image/login/email_icon.png" alt=""> <input
+                            type="text"
+                            id="register_email" placeholder="请输入邮箱/手机号码">
+                    </div>
+
+                </li>
+                <li>
+                    <div class="input_contain last">
+                        <img src="https://www.bestvideow.com/image/login/verifyCode_icon.png" alt=""><input
+                            type="text"
+                            id="register_imgCode" placeholder="请输入图形验证码">
+                    </div>
+                    <!-- 图形验证码 -->
+                    <img class="verifyImg" id="register_verifyImg" src="" alt="">
+                </li>
+                <li>
+                    <div class="input_contain last">
+                        <img class="key_icon" src="https://www.bestvideow.com/image/login/key_icon.png"
+                             alt=""><input type="text"
+                                           id="register_emailcode" placeholder="请输入验证码">
+                    </div>
+                    <!-- 邮箱验证码 -->
+                    <span class="get_verify_code" id="get_r_email_code"
+                          data-i18n="login.verificationCode">获取验证码</span>
+                </li>
+                <li>
+                    <div class="input_contain">
+                        <img src="https://www.bestvideow.com/image/login/password_icon.png" alt=""><input
+                            type="password"
+                            id="register_password" placeholder="请设置新密码">
+                        <div>
+                            <img class="pwd_visible eye_on" id="eye_on"
+                                 src="https://www.bestvideow.com/image/login/eye_on.png"
+                                 alt="">
+                            <img class="pwd_visible eye_down" id="eye_down"
+                                 src="https://www.bestvideow.com/image/login/eye_down.png" alt="">
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <div class="input_contain">
+                        <img src="https://www.bestvideow.com/image/login/password_icon.png" alt=""><input
+                            type="password"
+                            id="register_againPWD" placeholder="请再次输入新密码">
+                        <div>
+                            <img class="pwd_visible eye_on" id="eye_on"
+                                 src="https://www.bestvideow.com/image/login/eye_on.png"
+                                 alt="">
+                            <img class="pwd_visible eye_down" id="eye_down"
+                                 src="https://www.bestvideow.com/image/login/eye_down.png" alt="">
+                        </div>
+                    </div>
+                </li>
+
+            </ul>
+            <button class="get_login" id="get_register" data-i18n="login.register">注册</button>
+            <div class="setting">
+                <span class="register already_account"><span data-i18n="login.alreadyRegister">已有账号，</span><span
+                        id="to_login"
+                        class="to_login" data-i18n="login.to_login">去登录</span> </span>
+                <span class="forgetPWD" id="forgetPWD_register" data-i18n="login.forgetPassword">忘记密码</span>
+            </div>
+        </div>
+        <!-- 修改密码 -->
+        <div class="input_area modify_area" id="modify_area">
+
+            <ul>
+                <li>
+                    <div class="input_contain">
+                        <img src="https://www.bestvideow.com/image/login/email_icon.png" alt=""> <input
+                            type="text"
+                            id="modify_email" placeholder="请输入邮箱/手机号码">
+                    </div>
+
+                </li>
+                <li>
+                    <div class="input_contain last">
+                        <img src="https://www.bestvideow.com/image/login/verifyCode_icon.png" alt=""><input
+                            type="text"
+                            id="modify_imgCode" placeholder="请输入图形验证码">
+                    </div>
+                    <!-- 图形验证码 -->
+                    <img class="verifyImg" id="modify_verifyImg" src="" alt="">
+                </li>
+                <li>
+                    <div class="input_contain last">
+                        <img class="key_icon" src="https://www.bestvideow.com/image/login/key_icon.png"
+                             alt=""><input type="text"
+                                           id="modify_emailcode" placeholder="请输入验证码">
+                    </div>
+                    <!-- 邮箱验证码 -->
+                    <span class="get_verify_code" id="get_m_email_code"
+                          data-i18n="login.verificationCode">获取验证码</span>
+                </li>
+                <li>
+                    <div class="input_contain">
+                        <img src="https://www.bestvideow.com/image/login/password_icon.png" alt=""><input
+                            type="password"
+                            id="set_password" placeholder="请设置新密码">
+                        <div>
+                            <img class="pwd_visible eye_on" id="eye_on"
+                                 src="https://www.bestvideow.com/image/login/eye_on.png"
+                                 alt="">
+                            <img class="pwd_visible eye_down" id="eye_down"
+                                 src="https://www.bestvideow.com/image/login/eye_down.png" alt="">
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <div class="input_contain">
+                        <img src="https://www.bestvideow.com/image/login/password_icon.png" alt=""><input
+                            type="password"
+                            id="set_password_again" placeholder="请再次输入新密码">
+                        <div>
+                            <img class="pwd_visible eye_on" id="eye_on"
+                                 src="https://www.bestvideow.com/image/login/eye_on.png"
+                                 alt="">
+                            <img class="pwd_visible eye_down" id="eye_down"
+                                 src="https://www.bestvideow.com/image/login/eye_down.png" alt="">
+                        </div>
+                    </div>
+                </li>
+
+            </ul>
+            <button class="get_login" id="modify_password" data-i18n="login.changePassword">修改密码</button>
+            <div class="setting">
+                    <span class="register already_account"><span data-i18n="login.alreadyRegister">已有账号，</span><span
+                            id="to_login"
+                            class="to_login" data-i18n="login.to_login">去登录</span>
+                    </span>
+                <span class="forgetPWD" id="to_register_account" data-i18n="login.register">注册账号</span>
+            </div>
+        </div>
+
+
+    </div>
+</div>
+<!-- toast -->
+<div class="toast_cover" id="toast_cover">
+</div>
+<div class="menu_left">
+    <ul>
+        <li>首页</li>
+        <li>视频教程</li>
+        <li>使用教程</li>
+        <li>新闻快讯</li>
+        <li>联系我们</li>
+        <li>开通会员</li>
+        <li>登录</li>
+        <li>注册</li>
+    </ul>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+
+            <strong class="me-auto">Bootstrap</strong>
+            <small>11 mins ago</small>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            Hello, world! This is a toast message.
+        </div>
+    </div>
+</div>
+
+
+<!-- 最新的 Bootstrap5 核心 JavaScript 文件 -->
+<script src="https://www.bestvideow.com/js/bootstrap-5.1.1.min.js?v=1.1.3"></script>
+<script src="https://www.bestvideow.com/js/jquery-3.1.1.min.js?v=1.1.3"></script>
+<script src="https://www.bestvideow.com/js/jszip-3.1.5.min.js?v=1.1.3"></script>
+<!-- 引入i18next 和 jquery-i18next -->
+<script src="https://www.bestvideow.com/js/popper.min.js?v=1.1.3"></script>
+<script src="https://www.bestvideow.com/js/i18next.min.js?v=1.1.3"></script>
+<script src="https://www.bestvideow.com/js/jquery-i18next.min.js?v=1.1.3"></script>
+
+<script src="https://www.bestvideow.com/js/crytool.js?v=1.1.3"></script>
+
+<script src="https://www.bestvideow.com/js/master.js?v=1.1.3"></script>
+<script src="https://www.bestvideow.com/js/login_index.js?v=1.1.3"></script>
+<script src="https://www.bestvideow.com/js/commonUtils.js?v=1.1.3"></script>
+<script src="https://www.bestvideow.com/js/notify.js?v=1.1.3"></script>
+<script src="https://www.bestvideow.com/js/language.js?v=1.1.3"></script>
+
+
+<script src="https://www.bestvideow.com/js/itshiye.js?v=1.1.3"></script>
+
+</body>
+
+</html>

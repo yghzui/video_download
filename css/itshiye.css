@@ -1,0 +1,404 @@
+/*设置为块级元素，因为行类元素不能改变高度、宽度、内外边距等属性
+行内元素：a、b、span、img、input、strong、select、label、em、button、textarea
+块级元素：div、ul、li、dl、dt、dd、p、h1-h6、blockquote
+空元素：即系没有内容的HTML元素，例如：br、meta、hr、link、input、img
+*/
+/*页脚css*/
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#content {
+    flex: 1;
+    /* margin-top: 65px; */
+}
+
+.fl-jus-center {
+    display: flex;
+    justify-content: center;
+}
+.bg-fff{
+ background: #fff;
+ border-radius: 0.2rem;
+ /* width: 23.5%; */
+}
+
+#content #urlDiv{
+    width: 52.08rem;
+    height: 4.41rem;
+    background: #FFFFFF;
+    border-radius: 22px 22px 22px 22px;
+    border: 2px solid #A2A2A2;
+}
+#content .url-search-box{
+    display: flex;
+    justify-content: center;
+    /* margin-bottom: 3.8125rem; */
+}
+
+/* #downloadArea{
+    margin-top: 3.8125rem;
+} */
+
+#content .url-search-box #urlInput{
+    height: 100%;
+    border-radius: 22px;
+    border: 0px;
+    padding-right: 20%;
+    padding-left: 1.875rem;
+    font-size: 1.41rem;
+}
+
+#content .url-search-box .jx-icon{
+    position: absolute;
+    left: 0.5rem;
+    top: 35%;
+    display: inline-block;
+    width: 1.4775rem;
+    height: 1.4775rem;
+    z-index: 10;
+}
+#content .url-search-box .jx-btn{
+    width: 20%;
+    height: 4.41rem;
+    background: #3F8BFE;
+    border-radius: 22px 22px 22px 22px;
+    position: absolute;
+    right: -2px;
+    top: -2px;
+    font-size: 1.41rem;
+    z-index:10
+}
+
+#content .network-content{
+    display: flex;
+    flex-wrap: wrap;
+    /* width: 63.75rem; */
+    justify-content: space-between;
+    padding:0px;
+    margin-top: 2.86rem;
+}
+#content .set-list{
+    justify-content: space-between;
+}
+
+.nw-icon{
+    display: inline-block;
+    width: 90%;
+    height: 1.875rem;
+    margin-right:5px;
+}
+
+.nw-icon-wrapper {
+    display: inline-block; /* 或者 flex、inline-flex 取决于你要的效果 */
+}
+
+.nw-icon.icon{
+    width: 4.64rem;
+    height: 1.875rem;
+}
+
+.main-content{
+    height: calc(100% - 65px);
+}
+
+#content #freqAaskedQuest{
+    margin-top: 6.28125rem;
+}
+#content #freqAaskedQuest .freq-asked-quest{
+    font-size: 2.0rem !important;
+}
+
+#content #freqAaskedQuest .tip{
+    color: #8793AA;
+    font-size: 0.75rem;
+    margin-top: 1.03rem;
+}
+
+#content #freqAaskedQuest .quest-content{
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    padding-left: 0px;
+    /* width: 85.0rem; */
+    justify-content: space-between;
+}
+#content #freqAaskedQuest .quest-content a{
+    color: #000 !important;
+    text-decoration: none !important;
+    padding:0;
+}
+#content #freqAaskedQuest .quest-content .quest-item{
+    display: flex;
+    align-items: center;
+    width: 25.25rem;
+    height: auto;
+    background: #FFFFFF;
+    border-radius: 8px 8px 8px 8px;
+    margin: 0 0 1.8125rem;
+    padding: 0.75rem;
+    text-align: left;
+}
+
+#content #freqAaskedQuest .quest-content .quest-item .title{
+    font-size: 1.625rem;
+    display: flex;
+    /* align-items: center; */
+    margin-bottom: 1.0rem;
+}
+
+#content #freqAaskedQuest .quest-content .quest-icon{
+    display: inline-block;
+    width: 1.9375rem;
+    height: 1.9375rem;
+    margin-right: 10px;
+    margin-top: 4px;
+}
+
+.descript{
+    color: #9E9E9E;
+    font-size: 0.875rem;
+}
+
+.footer {
+    background-color: #f8f9fa;
+    padding: 20px;
+    text-align: center;
+}
+
+/*全局css*/
+.dropdown:hover .dropdown-menu {
+    display: block;
+}
+
+p {
+    text-indent: 0px; /* 设置段落首行缩进为20像素 */
+}
+
+/*设置去除所有a标签下划线*/
+a {
+    text-decoration: none
+}
+/*设置鼠标悬停背景颜色，并设置背景颜色圆角*/
+.menu-item:hover {
+    background-color: gainsboro;
+    border-radius: 7%;
+}
+
+/*设置导航栏样式*/
+#navigation {
+    font-family: var(--theme-font-family);
+    font-size: 14px;
+    /*background-color: #20a0ff;*/
+    height: 5.9375rem;
+    /*border-bottom: 1px solid #cbc5c5;*/
+    /* box-shadow: 0px 1px 10px #d2d1d1; */
+}
+
+/*设置导航栏字体颜色*/
+#navigation a{
+    color: #0a0a0a;
+}
+
+#navigationBar a{
+    margin-left: 15px;
+}
+
+/*设置logo样式*/
+#logo {
+    padding-top: 12rem;
+    /* 9.4375rem; */
+}
+
+#logo .inner-title{
+    font-size: 1.406rem;
+    font-weight: 500;
+    margin-bottom: 2.86rem;
+}
+
+.main-container{
+    background: url(../image/bg.png) no-repeat;
+    background-size: 100%;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    height: calc(100vh - 5.9375rem);
+}
+
+
+
+/*设置首页字体*/
+@font-face {
+    font-family: FontAwesome;
+    src: url(../fonts/fontawesome-webfont.woff2) format("woff2"),url(../fonts/fontawesome-webfont.woff) format("woff");
+    font-weight: 400;
+    font-style: normal
+}
+
+@font-face {
+    font-family: 'FZZhengDaHeiJ';
+    src: url('../fonts/FZZhengDaHeiJ.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+.main-container .logo-title{
+    font-family: 'FZZhengDaHeiJ';
+    font-size: 2.8125rem;
+    /* font-weight: 600; */
+}
+
+/*解析按钮样式3e86ee*/
+#downloadButton {
+    height: 50px;
+    border-radius: 30px;
+    background-color: #3e86ee;
+    border: 1px solid #3e86ee;
+}
+#batchAnalysis {
+    height: 50px;
+    border-radius: 30px;
+    background-color: #16a616;
+    border: 1px solid #16a616;
+}
+
+/*输入框样式*/
+#urlDiv {
+    height: 50px;
+}
+
+/*底部小logo样式*/
+.brand-log {
+    width: 80%;
+}
+
+/*缩略图样式*/
+.preview-image {
+    width: 115%;
+    border-radius: 3%;
+}
+
+/*设置h6字体*/
+#set-list-bk h6 {
+    font-weight: bold;
+    color: black;
+}
+
+/*设置整个内容页样式*/
+#main-content {
+    margin-top: 8%;
+}
+
+/*设置预览的图片样式*/
+#preview img{
+    max-width: 300px; /* 最大宽度为父容器宽度 */
+    min-width: 100px; /* 最小宽度为50像素 */
+    max-height: 600px;
+    min-height: 100px;
+}
+
+/*设置成功图标大小*/
+#successIcon,#failIcon {
+    font-size: 40px;
+}
+
+#downloadSuccess,#downloadFail span {
+    font-size: 22px;
+}
+
+/*选择框样式*/
+#results-display input[type="checkbox"] {
+    width: 20px;  /* 设置复选框的宽度 */
+    height: 20px; /* 设置复选框的高度 */
+}
+
+
+.selected {
+    border: 2px solid #3e86ee; /* 添加选中时的样式 */
+}
+
+
+/*调整小logo*/
+#logoLink {
+    /* margin-left: 5%; */
+}
+
+.login-register .btn-primary {
+    background-color: #3F8BFE !important;
+    border-color: #3F8BFE!important;
+  }
+
+/*.navbar-toggler {*/
+/*    border-color: #d90d0d;*/
+/*}*/
+
+
+/*页脚样式*/
+#footerArea {
+    font-size: 1.125rem;
+    color: #d0cbcb;
+}
+
+#footerArea a{
+    font-size: 1.125rem;
+    color: #d0cbcb;
+}
+
+.footerArea a{
+    color: #64748B !important;
+}
+
+/*导航下拉样式*/
+#nav-drop-down {
+    border: none;
+    border-radius: 10px;
+}
+
+#navigation {
+    position: relative; /* 或 absolute, fixed, sticky */
+    z-index: 100;
+}
+
+
+/*设置列表组样式*/
+.custom-list-group .list-group-item {
+    background-color: #ffffff; /* 白色背景 */
+    border: 1px solid transparent; /* 透明边框 */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 浅色阴影 */
+    border-radius: 10px; /* 圆角边框 */
+    margin-bottom: 10px; /* 调整间距 */
+}
+
+.custom-list-group .list-group-item:hover {
+    background-color: #f8f9fa; /* 鼠标悬停时背景色 */
+}
+.download_success{
+    display: none;
+    color: green;
+}
+
+@media (max-width: 575px) {
+    .navbar-nav .dropdown-menu{
+        position: absolute !important;
+    }
+    .main-container{
+        background: url(../image/bg_app.png) no-repeat center;
+        background-size: 100% 100%;
+    }
+    #logo {
+        padding-top: 8rem;
+    }
+    #content .url-search-box .jx-btn {
+        width: 30%;
+    }
+    #content .url-search-box #urlInput{
+        padding-right: 30%;
+    }
+    #logo .inner-title{
+        font-size: 1.03rem;
+    }
+    .main-container .logo-title{
+        font-size: 2.25rem;
+    }
+}

@@ -1,0 +1,67 @@
+静态资源下载报告
+==================================================
+下载时间: 2025-08-06 23:25:18
+目标网址: https://www.bestvideow.com/dy#
+保存目录: G:\Donwload\temp\下载
+下载文件数: 51
+
+下载的文件列表:
+------------------------------
+G:\Donwload\temp\下载\image\login\email_icon.png
+G:\Donwload\temp\下载\image\ppx-icon.png
+G:\Donwload\temp\下载\image\down-icon.png
+G:\Donwload\temp\下载\image\logo.png
+G:\Donwload\temp\下载\image\sixth-icon.png
+G:\Donwload\temp\下载\js\crytool.js
+G:\Donwload\temp\下载\image\wssp-icon.png
+G:\Donwload\temp\下载\css\loginRegister.css
+G:\Donwload\temp\下载\image\xhs-icon.png
+G:\Donwload\temp\下载\image\ks-icon.png
+G:\Donwload\temp\下载\index.html
+G:\Donwload\temp\下载\image\logo-icon.png
+G:\Donwload\temp\下载\image\login\verifyCode_icon.png
+G:\Donwload\temp\下载\js\jquery-3.1.1.min.js
+G:\Donwload\temp\下载\js\jszip-3.1.5.min.js
+G:\Donwload\temp\下载\image\third-icon.png
+G:\Donwload\temp\下载\image\one-icon.png
+G:\Donwload\temp\下载\css\itshiye.css
+G:\Donwload\temp\下载\js\language.js
+G:\Donwload\temp\下载\css\bootstrap-5.1.1.min.css
+G:\Donwload\temp\下载\js\i18next.min.js
+G:\Donwload\temp\下载\image\second-icon.png
+G:\Donwload\temp\下载\css\login_index.css
+G:\Donwload\temp\下载\image\yt-icon.png
+G:\Donwload\temp\下载\css\notify.css
+G:\Donwload\temp\下载\js\commonUtils.js
+G:\Donwload\temp\下载\js\master.js
+G:\Donwload\temp\下载\image\blbl-icon.png
+G:\Donwload\temp\下载\image\dy-icon.png
+G:\Donwload\temp\下载\js\itshiye.js
+G:\Donwload\temp\下载\image\wb-icon.png
+G:\Donwload\temp\下载\js\jquery-i18next.min.js
+G:\Donwload\temp\下载\image\xgsp-icon.png
+G:\Donwload\temp\下载\image\fourth-icon.png
+G:\Donwload\temp\下载\image\jd-icon.png
+G:\Donwload\temp\下载\image\fifth-icon.png
+G:\Donwload\temp\下载\image\login\user_icon.png
+G:\Donwload\temp\下载\image\login\login_dog.png
+G:\Donwload\temp\下载\js\bootstrap-5.1.1.min.js
+G:\Donwload\temp\下载\js\login_index.js
+G:\Donwload\temp\下载\image\login\eye_on.png
+G:\Donwload\temp\下载\image\login\key_icon.png
+G:\Donwload\temp\下载\js\notify.js
+G:\Donwload\temp\下载\image\login\password_icon.png
+G:\Donwload\temp\下载\image\jx-icon.png
+G:\Donwload\temp\下载\js\popper.min.js
+G:\Donwload\temp\下载\image\login\cancel.png
+G:\Donwload\temp\下载\image\hksp-icon.png
+G:\Donwload\temp\下载\image\tt-icon.png
+G:\Donwload\temp\下载\image\login\eye_down.png
+G:\Donwload\temp\下载\image\logomin.png
+
+文件类型统计:
+--------------------
+.css: 5 个文件
+.html: 1 个文件
+.js: 13 个文件
+.png: 32 个文件

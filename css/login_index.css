@@ -1,0 +1,264 @@
+/* 导航 */
+#navbarNav{
+    justify-content: space-between;
+}
+
+/* 侧边菜单栏 */
+.menu_left{
+    display: none;
+    position: fixed;
+    height: 100%;
+    width: 200px;
+    background: #fff;
+    left: 0;
+    right: 0;
+    z-index: 999;
+}
+/* 登录弹框 */
+.login_cover{
+    background: rgba(0, 0, 0, .3);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    z-index:5;
+}
+.login_cover .login_pannel{
+    position: absolute;
+    width: 423px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    background: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+}
+@media screen and (max-width:400px){
+    .login_cover .login_pannel{
+       
+        width: 380px;
+       
+    }
+}
+
+.login_cover .login_pannel .title_blue{
+   background: #3F9FFF;
+   height: 138px;
+   position: relative;
+}
+.login_cover .login_pannel .title_blue p{
+    color: #fff;
+    position: absolute;
+    font-weight: bold;
+    font-size:12px ;
+    right: 128px;
+    bottom: 65px;
+
+}
+.login_cover .login_pannel .title_blue .dog{
+    width: 113px;
+    position: absolute;
+    right: 25px;
+    bottom: -10px;
+    z-index: 9;
+}
+.login_cover .login_pannel .title_blue .cancel{
+    cursor: pointer;
+    position: absolute;
+    top: 15px;
+    right: 15px;
+   
+    z-index: 9;
+}
+.login_cover .login_pannel .title_text{
+    text-align: center;
+    font-weight: bold;
+    padding-top: 41px;
+    padding-bottom: 40px;
+}
+.login_cover .login_pannel .login_area{
+    display: block;
+}
+.login_cover .login_pannel .register_area{
+    padding-top: 58px;
+    display: none;
+}
+.login_cover .login_pannel .modify_area{
+    padding-top: 58px;
+    display:  none ;
+}
+
+
+.login_cover .login_pannel .input_area{
+    background: #fff;
+    border-radius: 6px;
+    margin-top: -29px;
+    position: relative;
+}
+.login_cover .login_pannel .input_area p{
+    margin: 0;
+}
+.login_cover .login_pannel .input_area ul{
+    list-style: none;
+    margin: 0 auto;
+    width: 337px;
+    padding: 0;
+}
+
+.login_cover .login_pannel .input_area ul li{
+    display: flex;
+    margin-bottom: 12px;
+    align-items: center;
+}
+.login_cover .login_pannel .input_area ul li .eye_on{
+    display: block;
+   
+}
+.login_cover .login_pannel .input_area ul li .eye_down{
+    display: none;
+   
+}
+.login_cover .login_pannel .input_area ul li .input_contain{
+    width: 337px;
+    height: 48px;
+    display: flex;
+    background: linear-gradient( 190deg, #E4F4FF 0%, rgba(242,248,255,0.79) 100%);
+    border-radius: 36px 36px 36px 36px;
+    border: 2px solid #E6EFFF;
+    align-items: center;
+    justify-content: start;
+    padding: 0 12px 0 16px;
+
+}
+.login_cover .login_pannel .input_area ul li .last{
+    width: 207px;
+}
+.login_cover .login_pannel .input_area ul li .get_verify_code{
+    border-radius: 100px;
+    border: 1px solid #3F9FFF;
+    color: #3F9FFF;
+    display: block;
+    padding: 13px 0;
+    width: 126px;
+    font-size: 14px;
+    text-align: center;
+    margin-left: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.login_cover .login_pannel .input_area ul li .counting{
+    border-color:#D9DEE2 ;
+    color: #fff;
+    background: #D9DEE2;
+}
+
+
+.login_cover .login_pannel .input_area ul li input{
+    border: none;
+    background: transparent;
+    margin-left: 12px;
+    width: 100%;
+    outline: none;
+}
+.login_cover .login_pannel .input_area ul li input::placeholder{
+    color: #C2C7CC;
+}
+.login_cover .login_pannel .input_area ul li img{
+    width: 20px;
+    /* height: 20px; */
+    
+    display: block;
+}
+.login_cover .login_pannel .input_area ul li .key_icon{}
+.login_cover .login_pannel .input_area ul li .verifyImg{
+    width: 126px;
+    height: 48px;
+    border-radius: 20px;
+    margin-left: 4px;
+    display: block;
+}
+
+.login_cover .login_pannel .get_login{
+    display: block;
+    border: 0;
+    background: #3F9FFF;
+    box-shadow: 0px 6px 12px 1px rgba(63,159,255,0.2);
+    border-radius: 36px 36px 36px 36px;
+    color: #fff;
+    width: 337px;
+    padding: 13px 0;
+    margin: 0 auto;
+    margin-top: 37px;
+    font-weight: bold;
+}
+.login_cover .login_pannel .setting{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 23px 0 40px 0;
+    font-size: 14px;
+    color: #3F9FFF;
+}
+.login_cover .login_pannel .setting .already_account{
+
+    color: #000;
+}
+.login_cover .login_pannel .setting .to_login{
+
+    color: #3F9FFF;
+    cursor: pointer;
+}
+ .setting .to_login{
+
+    color: #3F9FFF !important;
+    cursor: pointer;
+}
+
+.login_cover .login_pannel .setting .forgetPWD{
+    cursor: pointer;
+    display: block;
+    padding-left: 29px;
+    cursor: pointer;
+    
+}
+.login_cover .login_pannel .setting .register{
+    border-right: 1px solid #707070;
+    padding-right: 29px;
+    display: block;
+    cursor: pointer;
+}
+.toast_cover{
+    
+    display: inline-block;
+    display: none;
+    padding: 17px 101px;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, .7);
+    color: #fff;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    
+}
+.index_con .show{
+  
+    margin-left: 0 !important;
+    padding-left: 30px;
+    width: 100%;
+    position: absolute;
+    top: 66px;
+    left: 0;
+    box-shadow: 0 5px 5px #e5e5e5;
+}
+.index_con .show li{
+    border-bottom: 1px solid #efefef;
+}
+.index_con .show li a{
+    padding: 15px 0;
+    font-weight: bold;
+    color: #333;
+}
+
