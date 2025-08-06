@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QTextEdit, QLineEdit, QPushButton, 
                              QLabel, QProgressBar, QFileDialog, QMessageBox,
                              QComboBox, QCheckBox, QGroupBox, QSplitter)
-from PyQt5.QtCore import QThread, pyqtSignal, Qt, QTimer, QPoint
+from PyQt5.QtCore import QThread, pyqtSignal, Qt, QTimer, QPoint, QSettings
 from PyQt5.QtGui import QFont, QIcon, QTextCursor, QMouseEvent
 from PyQt5.QtWidgets import QApplication
 from video_downloader import VideoDownloader
@@ -216,7 +216,12 @@ class VideoDownloaderGUI(QMainWindow):
         self.current_progress_line = None  # 当前进度行
         self.dragging = False  # 是否正在拖动窗口
         self.drag_position = QPoint()  # 拖动起始位置
+        
+        # 初始化QSettings
+        self.settings = QSettings("config/app.ini", QSettings.IniFormat)
+        
         self.init_ui()
+        self.load_settings()  # 加载保存的设置
         
     def init_ui(self):
         """初始化用户界面"""
@@ -272,6 +277,7 @@ class VideoDownloaderGUI(QMainWindow):
         token_label.setMinimumWidth(80)
         self.token_input = QLineEdit()
         self.token_input.setPlaceholderText("可选，用于需要登录的视频")
+        self.token_input.textChanged.connect(self.on_token_input_changed)  # 监听文本变化
         token_layout.addWidget(token_label)
         token_layout.addWidget(self.token_input)
         input_layout.addLayout(token_layout)
@@ -281,7 +287,8 @@ class VideoDownloaderGUI(QMainWindow):
         dir_label = QLabel("下载目录:")
         dir_label.setMinimumWidth(80)
         self.dir_input = QLineEdit("downloads")
-        self.dir_input.setReadOnly(True)
+        self.dir_input.setPlaceholderText("请输入或选择下载目录")
+        self.dir_input.textChanged.connect(self.on_dir_input_changed)  # 监听文本变化
         self.browse_btn = QPushButton("浏览")
         self.browse_btn.setToolTip("选择下载文件夹")
         self.browse_btn.clicked.connect(self.browse_directory)
@@ -426,23 +433,85 @@ class VideoDownloaderGUI(QMainWindow):
         # 设置状态栏
         self.statusBar().showMessage("就绪")
         
-        # 初始化下载目录
-        self.init_download_dir()
-        
         # 设置鼠标追踪，用于检测鼠标移动
         self.setMouseTracking(True)
         
-    def init_download_dir(self):
-        """初始化下载目录"""
-        download_dir = Path("downloads")
-        download_dir.mkdir(exist_ok=True)
-        self.dir_input.setText(str(download_dir.absolute()))
+    def load_settings(self):
+        """加载保存的设置"""
+        try:
+            # 确保config目录存在
+            config_dir = Path("config")
+            config_dir.mkdir(exist_ok=True)
+            
+            # 加载下载目录
+            download_dir = self.settings.value("download_dir", "downloads")
+            self.dir_input.setText(download_dir)
+            
+            # 加载用户Token
+            token = self.settings.value("user_token", "")
+            self.token_input.setText(token)
+            
+            # 加载窗口位置和大小
+            geometry = self.settings.value("window_geometry")
+            if geometry:
+                self.restoreGeometry(geometry)
+            
+            print("设置加载成功")
+            
+        except Exception as e:
+            print(f"加载设置时出错: {e}")
+    
+    def save_settings(self):
+        """保存当前设置"""
+        try:
+            # 保存下载目录
+            self.settings.setValue("download_dir", self.dir_input.text())
+            
+            # 保存用户Token
+            self.settings.setValue("user_token", self.token_input.text())
+            
+            # 保存窗口位置和大小
+            self.settings.setValue("window_geometry", self.saveGeometry())
+            
+            # 同步设置到文件
+            self.settings.sync()
+            
+            print("设置保存成功")
+            
+        except Exception as e:
+            print(f"保存设置时出错: {e}")
+    
+    def on_dir_input_changed(self, text):
+        """下载目录输入框文本变化事件"""
+        # 延迟保存，避免频繁保存
+        if hasattr(self, '_dir_save_timer'):
+            self._dir_save_timer.stop()
+        else:
+            self._dir_save_timer = QTimer()
+            self._dir_save_timer.setSingleShot(True)
+            self._dir_save_timer.timeout.connect(self.save_settings)
         
+        self._dir_save_timer.start(1000)  # 1秒后保存
+    
+    def on_token_input_changed(self, text):
+        """Token输入框文本变化事件"""
+        # 延迟保存，避免频繁保存
+        if hasattr(self, '_token_save_timer'):
+            self._token_save_timer.stop()
+        else:
+            self._token_save_timer = QTimer()
+            self._token_save_timer.setSingleShot(True)
+            self._token_save_timer.timeout.connect(self.save_settings)
+        
+        self._token_save_timer.start(1000)  # 1秒后保存
+    
     def browse_directory(self):
         """浏览并选择下载目录"""
         dir_path = QFileDialog.getExistingDirectory(self, "选择下载目录", self.dir_input.text())
         if dir_path:
             self.dir_input.setText(dir_path)
+            # 保存设置
+            self.save_settings()
             
     def start_download(self):
         """开始下载"""
@@ -477,6 +546,13 @@ class VideoDownloaderGUI(QMainWindow):
         # 获取参数
         token = self.token_input.text().strip() or None
         download_dir = self.dir_input.text()
+        
+        # 确保下载目录存在
+        try:
+            Path(download_dir).mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            self.log_message(f"❌ 创建下载目录失败: {e}")
+            return
         
         # 创建并启动下载线程
         self.download_worker = DownloadWorker(url, token, download_dir)
@@ -585,6 +661,8 @@ class VideoDownloaderGUI(QMainWindow):
         """清空输入框"""
         self.url_input.clear()
         self.token_input.clear()
+        # 保存设置（清空token）
+        self.save_settings()
         
     def open_download_folder(self):
         """打开下载文件夹"""
@@ -617,10 +695,14 @@ class VideoDownloaderGUI(QMainWindow):
                                        QMessageBox.No)
             if reply == QMessageBox.Yes:
                 self.stop_download()
+                # 保存设置
+                self.save_settings()
                 event.accept()
             else:
                 event.ignore()
         else:
+            # 保存设置
+            self.save_settings()
             event.accept()
     
     def mousePressEvent(self, event: QMouseEvent):
