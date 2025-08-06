@@ -9,6 +9,7 @@ import sys
 import os
 import threading
 import time
+import re
 from pathlib import Path
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QTextEdit, QLineEdit, QPushButton, 
@@ -42,7 +43,20 @@ class DownloadWorker(QThread):
                 # 处理所有参数，包括end等关键字参数
                 message = ' '.join(str(arg) for arg in args)
                 if message.strip():  # 只发送非空消息
-                    self.progress_signal.emit(message)
+                    # 检查是否是进度信息（包含\r的）
+                    if '\r' in message:
+                        # 提取进度百分比信息
+                        progress_match = re.search(r'下载进度:\s*(\d+\.?\d*)%', message)
+                        if progress_match:
+                            progress = progress_match.group(1)
+                            self.progress_signal.emit(f"下载进度: {progress}%")
+                        else:
+                            # 移除\r并发送消息
+                            clean_message = message.replace('\r', '').strip()
+                            if clean_message:
+                                self.progress_signal.emit(clean_message)
+                    else:
+                        self.progress_signal.emit(message)
             
             # 替换下载器的print函数
             import builtins
@@ -63,7 +77,16 @@ class DownloadWorker(QThread):
                     self.finished_signal.emit(False, "未找到可下载的视频")
                     return
                 
+                # 获取视频标题
+                video_title = result.get('title', '')
+                if not video_title:
+                    # 尝试从第一个视频项中获取标题
+                    if video_list and len(video_list) > 0:
+                        video_title = video_list[0].get('title', '')
+                
                 self.progress_signal.emit(f"找到 {len(video_list)} 个文件")
+                if video_title:
+                    self.progress_signal.emit(f"视频标题: {video_title}")
                 
                 # 下载文件
                 success_count = 0
@@ -80,15 +103,26 @@ class DownloadWorker(QThread):
                     else:
                         extension = '.mp4'
                     
-                    # 从URL中提取文件名
-                    from urllib.parse import urlparse
-                    parsed_url = urlparse(file_url)
-                    original_filename = os.path.basename(parsed_url.path)
-                    
-                    if original_filename and '.' in original_filename:
-                        filename = f"{i+1}_{original_filename}"
+                    # 使用视频标题命名文件（如果可用）
+                    if video_title and video_title.strip():
+                        # 清理标题中的非法字符
+                        safe_title = self._sanitize_filename(video_title)
+                        if len(video_list) == 1:
+                            # 单个文件，直接使用标题
+                            filename = f"{safe_title}{extension}"
+                        else:
+                            # 多个文件，添加索引
+                            filename = f"{safe_title}_{i+1}{extension}"
                     else:
-                        filename = f"{i+1}_file{extension}"
+                        # 从URL中提取文件名，如果没有则使用默认名称
+                        from urllib.parse import urlparse
+                        parsed_url = urlparse(file_url)
+                        original_filename = os.path.basename(parsed_url.path)
+                        
+                        if original_filename and '.' in original_filename:
+                            filename = f"{i+1}_{original_filename}"
+                        else:
+                            filename = f"{i+1}_file{extension}"
                     
                     self.progress_signal.emit(f"正在下载: {filename}")
                     
@@ -112,6 +146,28 @@ class DownloadWorker(QThread):
                 
         except Exception as e:
             self.finished_signal.emit(False, f"下载过程中出现错误: {str(e)}")
+    
+    def _sanitize_filename(self, filename):
+        """
+        清理文件名，移除或替换非法字符
+        
+        Args:
+            filename (str): 原始文件名
+            
+        Returns:
+            str: 清理后的文件名
+        """
+        import re
+        # Windows文件系统不允许的字符
+        illegal_chars = r'[<>:"/\\|?*]'
+        # 替换为下划线
+        safe_name = re.sub(illegal_chars, '_', filename)
+        # 移除首尾空格和点
+        safe_name = safe_name.strip(' .')
+        # 限制长度（Windows路径限制）
+        if len(safe_name) > 200:
+            safe_name = safe_name[:200]
+        return safe_name
 
 class VideoDownloaderGUI(QMainWindow):
     """视频下载器GUI主窗口"""
@@ -119,6 +175,7 @@ class VideoDownloaderGUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.download_worker = None
+        self.current_progress_line = None  # 当前进度行
         self.init_ui()
         
     def init_ui(self):
@@ -309,6 +366,7 @@ class VideoDownloaderGUI(QMainWindow):
         
         # 清空日志
         self.log_text.clear()
+        self.current_progress_line = None  # 重置进度行
         
         # 获取参数
         token = self.token_input.text().strip() or None
@@ -355,7 +413,11 @@ class VideoDownloaderGUI(QMainWindow):
             
     def update_log(self, message):
         """更新日志显示"""
-        self.log_message(message)
+        # 检查是否是进度信息（包含百分比）
+        if '%' in message and any(char.isdigit() for char in message):
+            self.update_progress_message(message)
+        else:
+            self.log_message(message)
         
     def log_message(self, message):
         """添加日志消息"""
@@ -368,9 +430,43 @@ class VideoDownloaderGUI(QMainWindow):
         cursor.movePosition(QTextCursor.End)
         self.log_text.setTextCursor(cursor)
         
+    def update_progress_message(self, message):
+        """更新进度消息（在同一行显示）"""
+        timestamp = time.strftime("%H:%M:%S")
+        log_entry = f"[{timestamp}] {message}"
+        
+        # 获取当前文本内容
+        current_text = self.log_text.toPlainText()
+        lines = current_text.split('\n')
+        
+        # 查找是否已有进度行（包含"下载进度"的行）
+        progress_line_index = None
+        for i, line in enumerate(lines):
+            if "下载进度:" in line:
+                progress_line_index = i
+                break
+        
+        if progress_line_index is not None:
+            # 更新现有的进度行
+            lines[progress_line_index] = log_entry
+            self.current_progress_line = progress_line_index
+        else:
+            # 添加新的进度行
+            lines.append(log_entry)
+            self.current_progress_line = len(lines) - 1
+        
+        # 更新文本内容
+        self.log_text.setPlainText('\n'.join(lines))
+        
+        # 自动滚动到底部
+        cursor = self.log_text.textCursor()
+        cursor.movePosition(QTextCursor.End)
+        self.log_text.setTextCursor(cursor)
+        
     def clear_log(self):
         """清空日志"""
         self.log_text.clear()
+        self.current_progress_line = None  # 重置进度行
         
     def closeEvent(self, event):
         """窗口关闭事件"""

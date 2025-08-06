@@ -387,7 +387,16 @@ class VideoDownloader:
             print("未找到可下载的视频")
             return
         
+        # 获取视频标题
+        video_title = result.get('title', '')
+        if not video_title:
+            # 尝试从第一个视频项中获取标题
+            if video_list and len(video_list) > 0:
+                video_title = video_list[0].get('title', '')
+        
         print(f"找到 {len(video_list)} 个文件")
+        if video_title:
+            print(f"视频标题: {video_title}")
         
         # 下载文件
         for i, item in enumerate(video_list):
@@ -403,14 +412,25 @@ class VideoDownloader:
             else:
                 extension = '.mp4'
             
-            # 从URL中提取文件名，如果没有则使用默认名称
-            parsed_url = urlparse(file_url)
-            original_filename = os.path.basename(parsed_url.path)
-            
-            if original_filename and '.' in original_filename:
-                filename = f"{i+1}_{original_filename}"
+            # 使用视频标题命名文件（如果可用）
+            if video_title and video_title.strip():
+                # 清理标题中的非法字符
+                safe_title = self._sanitize_filename(video_title)
+                if len(video_list) == 1:
+                    # 单个文件，直接使用标题
+                    filename = f"{safe_title}{extension}"
+                else:
+                    # 多个文件，添加索引
+                    filename = f"{safe_title}_{i+1}{extension}"
             else:
-                filename = f"{i+1}_file{extension}"
+                # 从URL中提取文件名，如果没有则使用默认名称
+                parsed_url = urlparse(file_url)
+                original_filename = os.path.basename(parsed_url.path)
+                
+                if original_filename and '.' in original_filename:
+                    filename = f"{i+1}_{original_filename}"
+                else:
+                    filename = f"{i+1}_file{extension}"
             
             # 特殊处理B站视频链接
             if 'bilivideo.com' in file_url or 'bilibili.com' in file_url:
@@ -425,6 +445,27 @@ class VideoDownloader:
                 self.download_file(file_url, filename)
             
             print("-" * 30)
+    
+    def _sanitize_filename(self, filename):
+        """
+        清理文件名，移除或替换非法字符
+        
+        Args:
+            filename (str): 原始文件名
+            
+        Returns:
+            str: 清理后的文件名
+        """
+        # Windows文件系统不允许的字符
+        illegal_chars = r'[<>:"/\\|?*]'
+        # 替换为下划线
+        safe_name = re.sub(illegal_chars, '_', filename)
+        # 移除首尾空格和点
+        safe_name = safe_name.strip(' .')
+        # 限制长度（Windows路径限制）
+        if len(safe_name) > 200:
+            safe_name = safe_name[:200]
+        return safe_name
     
     def _download_bilibili_video(self, url, filename):
         """

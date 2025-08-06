@@ -96,7 +96,16 @@ def download_video(url, save_dir="downloads"):
                     print("❌ 未找到可下载的文件")
                     return False
                 
+                # 获取视频标题
+                video_title = data.get('title', '')
+                if not video_title:
+                    # 尝试从第一个视频项中获取标题
+                    if video_list and len(video_list) > 0:
+                        video_title = video_list[0].get('title', '')
+                
                 print(f"✅ 解析成功！找到 {len(video_list)} 个文件")
+                if video_title:
+                    print(f"📝 视频标题: {video_title}")
                 
                 # 下载文件
                 for i, item in enumerate(video_list):
@@ -108,7 +117,21 @@ def download_video(url, save_dir="downloads"):
                     
                     # 生成文件名
                     extension = '.jpg' if file_type == 'image' else '.mp4'
-                    filename = f"{platform}_{i+1}{extension}"
+                    
+                    # 使用视频标题命名文件（如果可用）
+                    if video_title and video_title.strip():
+                        # 清理标题中的非法字符
+                        safe_title = sanitize_filename(video_title)
+                        if len(video_list) == 1:
+                            # 单个文件，直接使用标题
+                            filename = f"{safe_title}{extension}"
+                        else:
+                            # 多个文件，添加索引
+                            filename = f"{safe_title}_{i+1}{extension}"
+                    else:
+                        # 使用平台名和索引
+                        filename = f"{platform}_{i+1}{extension}"
+                    
                     file_path = Path(save_dir) / filename
                     
                     print(f"📥 下载中: {filename}")
@@ -140,6 +163,28 @@ def download_video(url, save_dir="downloads"):
     except Exception as e:
         print(f"❌ 网络错误: {e}")
         return False
+
+def sanitize_filename(filename):
+    """
+    清理文件名，移除或替换非法字符
+    
+    Args:
+        filename (str): 原始文件名
+        
+    Returns:
+        str: 清理后的文件名
+    """
+    import re
+    # Windows文件系统不允许的字符
+    illegal_chars = r'[<>:"/\\|?*]'
+    # 替换为下划线
+    safe_name = re.sub(illegal_chars, '_', filename)
+    # 移除首尾空格和点
+    safe_name = safe_name.strip(' .')
+    # 限制长度（Windows路径限制）
+    if len(safe_name) > 200:
+        safe_name = safe_name[:200]
+    return safe_name
 
 def main():
     """主函数"""
