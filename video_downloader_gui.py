@@ -15,7 +15,7 @@ from pathlib import Path
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QTextEdit, QLineEdit, QPushButton, 
                              QLabel, QProgressBar, QFileDialog, QMessageBox,
-                             QComboBox, QCheckBox, QGroupBox, QSplitter)
+                             QComboBox, QCheckBox, QGroupBox, QSplitter, QMenu, QAction)
 from PyQt5.QtCore import QThread, pyqtSignal, Qt, QTimer, QPoint, QSettings
 from PyQt5.QtGui import QFont, QIcon, QTextCursor, QMouseEvent
 from PyQt5.QtWidgets import QApplication
@@ -207,6 +207,85 @@ class DownloadWorker(QThread):
             safe_name = safe_name[:200]
         return safe_name
 
+class UrlTextEdit(QTextEdit):
+    """
+    支持识别链接的文本输入框
+    右键菜单在识别到链接（优先使用选中文本，否则使用剪贴板文本）时，提供：
+    - 换行追加链接：在末尾换行并追加该链接
+    - 替换为该链接：用该链接替换全部内容
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # 仅接受纯文本，防止富文本粘贴带入样式
+        self.setAcceptRichText(False)
+
+    def contextMenuEvent(self, event):
+        # 使用系统默认菜单作为基础
+        menu: QMenu = self.createStandardContextMenu()
+
+        # 尝试获取候选链接（优先选中文本，否则剪贴板）
+        candidate_url = self._get_candidate_url()
+        if candidate_url:
+            menu.addSeparator()
+            append_action = QAction("换行追加链接", self)
+            replace_action = QAction("替换为该链接", self)
+
+            def do_append():
+                # 在末尾换行并追加链接
+                current_text = self.toPlainText()
+                if current_text and not current_text.endswith("\n"):
+                    current_text += "\n"
+                current_text += candidate_url
+                self.setPlainText(current_text)
+                # 光标移至末尾
+                cursor = self.textCursor()
+                cursor.movePosition(QTextCursor.End)
+                self.setTextCursor(cursor)
+
+            def do_replace():
+                # 用该链接替换全部内容
+                self.setPlainText(candidate_url)
+                cursor = self.textCursor()
+                cursor.movePosition(QTextCursor.End)
+                self.setTextCursor(cursor)
+
+            append_action.triggered.connect(do_append)
+            replace_action.triggered.connect(do_replace)
+            menu.addAction(append_action)
+            menu.addAction(replace_action)
+
+        menu.exec_(event.globalPos())
+
+    def _get_candidate_url(self) -> str:
+        """
+        返回可用作链接的文本：优先使用选中的文本，否则使用剪贴板文本。
+        未找到或不满足链接格式时返回空字符串。
+        """
+        # 优先：选中文本
+        cursor = self.textCursor()
+        selected_text = cursor.selectedText().strip()
+        # QTextEdit 的 selectedText 中换行可能为 \u2029，统一处理
+        selected_text = selected_text.replace("\u2029", "\n")
+        if self._is_url(selected_text):
+            return selected_text
+
+        # 备选：剪贴板
+        clipboard = QApplication.clipboard()
+        if clipboard:
+            clip_text = (clipboard.text() or "").strip()
+            if self._is_url(clip_text):
+                return clip_text
+
+        return ""
+
+    def _is_url(self, text: str) -> bool:
+        """简单判断文本是否为链接"""
+        if not text:
+            return False
+        # 识别 http/https 或 www. 开头的常见链接格式
+        pattern = re.compile(r'^(https?://|www\.)\S+$', re.IGNORECASE)
+        return bool(pattern.match(text))
+
 class VideoDownloaderGUI(QMainWindow):
     """视频下载器GUI主窗口"""
     
@@ -251,7 +330,8 @@ class VideoDownloaderGUI(QMainWindow):
         
         # URL输入
         url_layout = QVBoxLayout()
-        self.url_input = QTextEdit()
+        self.url_input = UrlTextEdit()
+        self.url_input.setAcceptRichText(False)  # 禁用富文本粘贴，避免携带背景色/字体色
         self.url_input.setPlaceholderText("请输入视频链接（支持抖音、B站、快手、小红书、YouTube等）\n可以输入多个链接，每行一个")
         self.url_input.setMaximumHeight(100)  # 限制高度，避免占用太多空间
         self.url_input.setMinimumHeight(60)   # 设置最小高度
@@ -267,7 +347,7 @@ class VideoDownloaderGUI(QMainWindow):
                 border-color: #3498db;
             }
         """)
-
+        
         url_layout.addWidget(self.url_input)
         input_layout.addLayout(url_layout)
         
@@ -415,6 +495,7 @@ class VideoDownloaderGUI(QMainWindow):
         log_layout = QVBoxLayout(log_group)
         
         self.log_text = QTextEdit()
+        self.log_text.setAcceptRichText(False)  # 仅接受纯文本，避免外部粘贴带入样式
         self.log_text.setReadOnly(True)
         self.log_text.setFont(QFont("Consolas", 10))
         self.log_text.setStyleSheet("""
