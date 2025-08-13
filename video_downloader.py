@@ -14,6 +14,8 @@ import time
 from urllib.parse import urlparse
 from pathlib import Path
 import urllib3
+import argparse
+import sys
 
 # 禁用SSL警告
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -446,6 +448,98 @@ class VideoDownloader:
             
             print("-" * 30)
     
+    def download_video_once(self, url, token=None):
+        """
+        单次下载入口：解析并下载，返回是否至少成功下载一个文件。
+        保留打印日志（不移除原有调试输出）。
+        
+        Args:
+            url (str): 视频URL
+            token (str, optional): 用户token
+        
+        Returns:
+            bool: 是否成功下载至少一个文件
+        """
+        print("=" * 50)
+        print("视频解析下载器")
+        print("=" * 50)
+        
+        # 解析视频
+        result = self.parse_video(url, token)
+        if not result:
+            return False
+        
+        # 获取视频列表
+        video_list = result.get('voideDeatilVoList', [])
+        if not video_list:
+            print("未找到可下载的视频")
+            return False
+        
+        # 获取视频标题
+        video_title = result.get('title', '')
+        if not video_title:
+            # 尝试从第一个视频项中获取标题
+            if video_list and len(video_list) > 0:
+                video_title = video_list[0].get('title', '')
+        
+        print(f"找到 {len(video_list)} 个文件")
+        if video_title:
+            print(f"视频标题: {video_title}")
+        
+        success_count = 0
+        # 下载文件
+        for i, item in enumerate(video_list):
+            file_url = item.get('url')
+            file_type = item.get('type', 'video')
+            
+            if not file_url:
+                continue
+            
+            # 生成文件名
+            if file_type == 'image':
+                extension = '.jpg'
+            else:
+                extension = '.mp4'
+            
+            # 使用视频标题命名文件（如果可用）
+            if video_title and video_title.strip():
+                # 清理标题中的非法字符
+                safe_title = self._sanitize_filename(video_title)
+                if len(video_list) == 1:
+                    # 单个文件，直接使用标题
+                    filename = f"{safe_title}{extension}"
+                else:
+                    # 多个文件，添加索引
+                    filename = f"{safe_title}_{i+1}{extension}"
+            else:
+                # 从URL中提取文件名，如果没有则使用默认名称
+                parsed_url = urlparse(file_url)
+                original_filename = os.path.basename(parsed_url.path)
+                
+                if original_filename and '.' in original_filename:
+                    filename = f"{i+1}_{original_filename}"
+                else:
+                    filename = f"{i+1}_file{extension}"
+            
+            # 特殊处理B站视频链接
+            if 'bilivideo.com' in file_url or 'bilibili.com' in file_url:
+                print(f"检测到B站视频链接，使用特殊下载策略...")
+                # 尝试不同的下载策略
+                success = self._download_bilibili_video(file_url, filename)
+                if not success:
+                    print(f"B站特殊下载策略失败，尝试普通下载...")
+                    success = self.download_file(file_url, filename)
+            else:
+                # 普通下载
+                success = self.download_file(file_url, filename)
+            
+            if success:
+                success_count += 1
+            
+            print("-" * 30)
+        
+        return success_count > 0
+    
     def _sanitize_filename(self, filename):
         """
         清理文件名，移除或替换非法字符
@@ -570,11 +664,24 @@ def main():
     """
     主函数
     """
+    parser = argparse.ArgumentParser(description="视频解析下载器")
+    parser.add_argument('--url', help='要下载的视频链接')
+    parser.add_argument('--dir', dest='download_dir', default='downloads', help='下载目录')
+    parser.add_argument('--token', help='用户token，可选', default=None)
+    args, unknown = parser.parse_known_args()
+    
+    # 如果提供了URL，执行单次下载并以退出码表示结果
+    if args.url:
+        downloader = VideoDownloader(args.download_dir)
+        success = downloader.download_video_once(args.url, args.token)
+        sys.exit(0 if success else 1)
+    
+    # 否则进入交互模式（保持原有行为）
     # 创建下载器实例
     downloader = VideoDownloader("downloads")
     
     while True:
-        print("\n请输入视频链接（输入 'quit' 退出）:")
+        print("\n请输入视频链接（输入 'quit' 退出）：")
         user_input = input().strip()
         
         if user_input.lower() in ['quit', 'exit', 'q']:
@@ -585,12 +692,12 @@ def main():
             continue
         
         # 可选：输入用户token（如果有的话）
-        print("请输入用户token（可选，直接回车跳过）:")
+        print("请输入用户token（可选，直接回车跳过）：")
         token = input().strip()
         if not token:
             token = None
         
-        # 开始下载
+        # 开始下载（沿用原方法）
         downloader.download_video(user_input, token)
 
 if __name__ == "__main__":

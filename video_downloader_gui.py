@@ -58,154 +58,94 @@ def set_application_icon(app_or_widget=None):
         print("未找到可用的图标文件")
 
 class DownloadWorker(QThread):
-    """下载工作线程"""
+    """下载工作线程（子进程模式，便于并发且不影响全局print）"""
     progress_signal = pyqtSignal(str)  # 进度信息信号
-    download_progress_signal = pyqtSignal(int)  # 下载进度信号
+    download_progress_signal = pyqtSignal(int)  # 下载进度信号（保留，当前未精细使用）
     finished_signal = pyqtSignal(bool, str)  # 完成信号
     
-    def __init__(self, url, token=None, download_dir="downloads"):
+    def __init__(self, url, token=None, download_dir="downloads", task_name=""):
         super().__init__()
         self.url = url
         self.token = token
         self.download_dir = download_dir
-        self.downloader = None
+        self.task_name = task_name or url
+        self.process = None  # 子进程句柄
         
     def run(self):
-        """运行下载任务"""
+        """运行下载任务（通过调用子进程执行 video_downloader.py 的一次性下载）"""
         try:
-            self.progress_signal.emit("正在初始化下载器...")
-            self.downloader = VideoDownloader(self.download_dir)
+            # 确保下载目录存在
+            Path(self.download_dir).mkdir(parents=True, exist_ok=True)
             
-            # 重写下载器的输出方法，将信息发送到GUI
-            def custom_print(*args, **kwargs):
-                # 处理所有参数，包括end等关键字参数
-                message = ' '.join(str(arg) for arg in args)
-                if message.strip():  # 只发送非空消息
-                    # 检查是否是进度信息（包含\r的）
-                    if '\r' in message:
-                        # 提取进度百分比信息
-                        progress_match = re.search(r'下载进度:\s*(\d+\.?\d*)%', message)
-                        if progress_match:
-                            progress = progress_match.group(1)
-                            self.progress_signal.emit(f"下载进度: {progress}%")
-                        else:
-                            # 移除\r并发送消息
-                            clean_message = message.replace('\r', '').strip()
-                            if clean_message:
-                                self.progress_signal.emit(clean_message)
-                    else:
-                        self.progress_signal.emit(message)
+            # 组装命令：使用 -u 关闭缓冲，便于实时输出
+            cmd = [
+                sys.executable,
+                '-u',
+                'video_downloader.py',
+                '--url', self.url,
+                '--dir', self.download_dir
+            ]
+            if self.token:
+                cmd += ['--token', self.token]
             
-            # 替换下载器的print函数
-            import builtins
-            original_print = builtins.print
-            builtins.print = custom_print
+            self.progress_signal.emit(f"[{self.task_name}] 启动下载进程: {' '.join(cmd)}")
             
-            try:
-                self.progress_signal.emit("开始解析视频...")
-                result = self.downloader.parse_video(self.url, self.token)
-                
-                if not result:
-                    self.finished_signal.emit(False, "视频解析失败")
-                    return
-                
-                # 获取视频列表
-                video_list = result.get('voideDeatilVoList', [])
-                if not video_list:
-                    self.finished_signal.emit(False, "未找到可下载的视频")
-                    return
-                
-                # 获取视频标题
-                video_title = result.get('title', '')
-                if not video_title:
-                    # 尝试从第一个视频项中获取标题
-                    if video_list and len(video_list) > 0:
-                        video_title = video_list[0].get('title', '')
-                
-                self.progress_signal.emit(f"找到 {len(video_list)} 个文件")
-                if video_title:
-                    self.progress_signal.emit(f"视频标题: {video_title}")
-                
-                # 下载文件
-                success_count = 0
-                for i, item in enumerate(video_list):
-                    file_url = item.get('url')
-                    file_type = item.get('type', 'video')
+            # 启动子进程，合并stderr到stdout
+            self.process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                cwd=str(Path('.').resolve()),
+                bufsize=0
+            )
+            
+            success = False
+            buffer = ''
+            
+            # 按字符读取，兼容带\r的进度输出
+            if self.process.stdout is not None:
+                while True:
+                    chunk = self.process.stdout.read(1)
+                    if not chunk:
+                        break
+                    try:
+                        ch = chunk.decode('utf-8', errors='ignore')
+                    except AttributeError:
+                        # 在某些环境下read返回str
+                        ch = chunk
                     
-                    if not file_url:
-                        continue
-                    
-                    # 生成文件名
-                    if file_type == 'image':
-                        extension = '.jpg'
+                    if ch in ('\r', '\n'):
+                        line = buffer.strip()
+                        if line:
+                            self.progress_signal.emit(f"[{self.task_name}] {line}")
+                            # 输出解析仅用于展示，不再用于最终成功判断
+                        buffer = ''
                     else:
-                        extension = '.mp4'
-                    
-                    # 使用视频标题命名文件（如果可用）
-                    if video_title and video_title.strip():
-                        # 清理标题中的非法字符
-                        safe_title = self._sanitize_filename(video_title)
-                        if len(video_list) == 1:
-                            # 单个文件，直接使用标题
-                            filename = f"{safe_title}{extension}"
-                        else:
-                            # 多个文件，添加索引
-                            filename = f"{safe_title}_{i+1}{extension}"
-                    else:
-                        # 从URL中提取文件名，如果没有则使用默认名称
-                        from urllib.parse import urlparse
-                        parsed_url = urlparse(file_url)
-                        original_filename = os.path.basename(parsed_url.path)
-                        
-                        if original_filename and '.' in original_filename:
-                            filename = f"{i+1}_{original_filename}"
-                        else:
-                            filename = f"{i+1}_file{extension}"
-                    
-                    self.progress_signal.emit(f"正在下载: {filename}")
-                    
-                    # 下载文件
-                    if self.downloader.download_file(file_url, filename):
-                        success_count += 1
-                        self.progress_signal.emit(f"下载成功: {filename}")
-                    else:
-                        self.progress_signal.emit(f"下载失败: {filename}")
-                    
-                    self.progress_signal.emit("-" * 30)
-                
-                if success_count > 0:
-                    self.finished_signal.emit(True, f"下载完成！成功下载 {success_count}/{len(video_list)} 个文件")
-                else:
-                    self.finished_signal.emit(False, "所有文件下载失败")
-                    
-            finally:
-                # 恢复原始的print函数
-                builtins.print = original_print
-                
+                        buffer += ch
+            
+            # 处理剩余缓冲
+            if buffer.strip():
+                self.progress_signal.emit(f"[{self.task_name}] {buffer.strip()}")
+            
+            # 等待子进程退出并基于退出码判定成功
+            retcode = self.process.wait()
+            final_success = (retcode == 0)
+            if final_success:
+                self.finished_signal.emit(True, f"[{self.task_name}] 下载完成")
+            else:
+                self.finished_signal.emit(False, f"[{self.task_name}] 下载失败（退出码 {retcode}）")
         except Exception as e:
-            self.finished_signal.emit(False, f"下载过程中出现错误: {str(e)}")
-    
-    def _sanitize_filename(self, filename):
-        """
-        清理文件名，移除或替换非法字符
+            self.finished_signal.emit(False, f"[{self.task_name}] 下载过程中出现错误: {str(e)}")
         
-        Args:
-            filename (str): 原始文件名
-            
-        Returns:
-            str: 清理后的文件名
-        """
-        import re
-        # Windows文件系统不允许的字符
-        illegal_chars = r'[<>:"/\\|?*]'
-        # 替换为下划线
-        safe_name = re.sub(illegal_chars, '_', filename)
-        # 移除首尾空格和点
-        safe_name = safe_name.strip(' .')
-        # 限制长度（Windows路径限制）
-        if len(safe_name) > 200:
-            safe_name = safe_name[:200]
-        return safe_name
+    def terminate(self):
+        """终止任务：终止子进程"""
+        try:
+            if self.process and self.process.poll() is None:
+                self.process.kill()
+        except Exception:
+            pass
+        finally:
+            super().terminate()
 
 class UrlTextEdit(QTextEdit):
     """
@@ -309,6 +249,12 @@ class VideoDownloaderGUI(QMainWindow):
         
         # 设置窗口图标
         set_application_icon(self)
+        
+        # 并发与任务管理
+        self.max_concurrency = 3  # 默认并发数
+        self.pending_urls = []    # 等待中的URL
+        self.active_workers = []  # 正在运行的workers
+        self.completed_results = []  # (success, message)
         
         # 创建中央部件
         central_widget = QWidget()
@@ -601,89 +547,124 @@ class VideoDownloaderGUI(QMainWindow):
             QMessageBox.warning(self, "警告", "请输入视频链接！")
             return
             
-        # 处理多行输入，取第一个非空行作为下载链接
+        # 处理多行输入，按行收集所有有效链接
         urls = [line.strip() for line in url_text.split('\n') if line.strip()]
         if not urls:
             QMessageBox.warning(self, "警告", "请输入有效的视频链接！")
             return
-            
-        url = urls[0]  # 暂时只处理第一个链接，后续可以扩展为批量下载
+         
+        # 初始化任务队列
+        self.pending_urls = urls.copy()
+        self.completed_results = []
+         
         if len(urls) > 1:
-            self.log_message(f"检测到多个链接，当前只处理第一个链接: {url}")
-            self.log_message(f"其他链接: {', '.join(urls[1:])}")
-            
+            self.log_message(f"检测到 {len(urls)} 个链接，启用并发下载（上限 {self.max_concurrency}）")
+         
         # 禁用下载按钮，启用停止按钮
         self.download_btn.setEnabled(False)
         self.stop_btn.setEnabled(True)
-        
-        # 显示进度条
+         
+        # 显示进度条（未知进度）
         self.progress_bar.setVisible(True)
-        self.progress_bar.setRange(0, 0)  # 不确定进度
-        
+        self.progress_bar.setRange(0, 0)
+         
         # 清空日志
         self.log_text.clear()
-        self.current_progress_line = None  # 重置进度行
-        
-        # 获取参数
+        self.current_progress_line = None
+         
+        # 获取公共参数
         token = self.token_input.text().strip() or None
-        download_dir = self.dir_input.text()
-        
+        self._common_token = token
+        self._common_download_dir = self.dir_input.text()
+         
         # 确保下载目录存在
         try:
-            Path(download_dir).mkdir(parents=True, exist_ok=True)
+            Path(self._common_download_dir).mkdir(parents=True, exist_ok=True)
         except Exception as e:
             self.log_message(f"❌ 创建下载目录失败: {e}")
             return
-        
-        # 创建并启动下载线程
-        self.download_worker = DownloadWorker(url, token, download_dir)
-        self.download_worker.progress_signal.connect(self.update_log)
-        self.download_worker.finished_signal.connect(self.download_finished)
-        self.download_worker.start()
-        
+         
+        # 启动并发任务
+        self._start_next_workers()
+         
         self.statusBar().showMessage("正在下载...")
         self.log_message("开始下载任务...")
         
+    def _start_next_workers(self):
+        """根据并发上限启动等待中的任务"""
+        while self.pending_urls and len(self.active_workers) < self.max_concurrency:
+            url = self.pending_urls.pop(0)
+            task_name = f"任务{len(self.completed_results) + len(self.active_workers) + 1}"
+            worker = DownloadWorker(url, self._common_token, self._common_download_dir, task_name)
+            worker.progress_signal.connect(self.update_log)
+            # 使用lambda捕获worker引用以便识别
+            worker.finished_signal.connect(lambda success, message, w=worker: self._on_worker_finished(success, message, w))
+            self.active_workers.append(worker)
+            worker.start()
+            self.log_message(f"[{task_name}] 已启动: {url}")
+        
+    def _on_worker_finished(self, success, message, worker):
+        """单个任务结束回调，启动队列中下一项或收尾"""
+        # 移除该worker
+        try:
+            if worker in self.active_workers:
+               self.active_workers.remove(worker)
+        except Exception:
+            pass
+        
+        self.completed_results.append((success, message))
+        self.log_message(message)
+        
+        # 若还有待启动任务则继续
+        if self.pending_urls:
+            self._start_next_workers()
+        
+        # 所有任务结束
+        if not self.active_workers and not self.pending_urls:
+            # 恢复按钮状态
+            self.download_btn.setEnabled(True)
+            self.stop_btn.setEnabled(False)
+            self.progress_bar.setVisible(False)
+            
+            total = len(self.completed_results)
+            ok = sum(1 for s, _ in self.completed_results if s)
+            if ok > 0 and ok == total:
+                self.statusBar().showMessage("全部下载完成")
+                self.log_message(f"✅ 全部下载完成：{ok}/{total}")
+            elif ok > 0:
+                self.statusBar().showMessage("部分下载完成")
+                self.log_message(f"⚠️ 部分完成：{ok}/{total}")
+            else:
+                self.statusBar().showMessage("下载失败")
+                self.log_message("❌ 所有任务均失败")
+        
     def stop_download(self):
-        """停止下载"""
-        if self.download_worker and self.download_worker.isRunning():
-            self.download_worker.terminate()
-            self.download_worker.wait()
-            self.log_message("下载已停止")
-            self.statusBar().showMessage("下载已停止")
-            
+        """停止下载：终止所有正在进行的任务"""
+        # 终止活动worker
+        for worker in list(self.active_workers):
+            try:
+                worker.terminate()
+            except Exception:
+                pass
+        self.active_workers.clear()
+        self.pending_urls.clear()
+        
+        self.log_message("下载已停止")
+        self.statusBar().showMessage("下载已停止")
+        
         # 恢复按钮状态
         self.download_btn.setEnabled(True)
         self.stop_btn.setEnabled(False)
         self.progress_bar.setVisible(False)
         
-    def download_finished(self, success, message):
-        """下载完成回调"""
-        # 恢复按钮状态
-        self.download_btn.setEnabled(True)
-        self.stop_btn.setEnabled(False)
-        self.progress_bar.setVisible(False)
-        
-        # 显示结果
-        if success:
-            self.log_message(f"✅ {message}")
-            self.statusBar().showMessage("下载完成")
-            
-            # # 询问是否打开下载文件夹
-            # reply = QMessageBox.question(self, "下载完成", 
-            #                            f"{message}\n\n是否要打开下载文件夹？",
-            #                            QMessageBox.Yes | QMessageBox.No,
-            #                            QMessageBox.Yes)
-            # if reply == QMessageBox.Yes:
-            #     self.open_download_folder()
-        else:
-            self.log_message(f"❌ {message}")
-            self.statusBar().showMessage("下载失败")
-            QMessageBox.warning(self, "失败", message)
-            
     def update_log(self, message):
         """更新日志显示"""
-        # 检查是否是进度信息（包含百分比）
+        # 多任务并发时，避免单行合并进度，直接追加
+        if len(self.active_workers) > 1 or self.pending_urls:
+            self.log_message(message)
+            return
+        
+        # 单任务情况下保留进度行合并逻辑
         if '%' in message and any(char.isdigit() for char in message):
             self.update_progress_message(message)
         else:
