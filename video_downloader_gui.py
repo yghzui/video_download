@@ -244,7 +244,7 @@ class VideoDownloaderGUI(QMainWindow):
         
     def init_ui(self):
         """初始化用户界面"""
-        self.setWindowTitle("视频解析下载器 v1.0")
+        self.setWindowTitle("视频解析下载器 v1.1")
         self.setGeometry(100, 100, 900, 650)
         
         # 设置窗口图标
@@ -474,6 +474,13 @@ class VideoDownloaderGUI(QMainWindow):
             download_dir = self.settings.value("download_dir", "downloads")
             self.dir_input.setText(download_dir)
             
+            # 确保下载目录存在
+            try:
+                Path(download_dir).mkdir(parents=True, exist_ok=True)
+                print(f"已确保下载目录存在: {download_dir}")
+            except Exception as e:
+                print(f"创建下载目录时出错: {e}")
+            
             # 加载用户Token
             token = self.settings.value("user_token", "")
             self.token_input.setText(token)
@@ -491,8 +498,15 @@ class VideoDownloaderGUI(QMainWindow):
     def save_settings(self):
         """保存当前设置"""
         try:
+            # 确保下载目录存在
+            download_dir = self.dir_input.text()
+            try:
+                Path(download_dir).mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                print(f"创建下载目录时出错: {e}")
+            
             # 保存下载目录
-            self.settings.setValue("download_dir", self.dir_input.text())
+            self.settings.setValue("download_dir", download_dir)
             
             # 保存用户Token
             self.settings.setValue("user_token", self.token_input.text())
@@ -659,16 +673,51 @@ class VideoDownloaderGUI(QMainWindow):
         
     def update_log(self, message):
         """更新日志显示"""
-        # 多任务并发时，避免单行合并进度，直接追加
-        if len(self.active_workers) > 1 or self.pending_urls:
-            self.log_message(message)
-            return
+        # 检查消息中是否包含回车符(\r)
+        if '\r' in message:
+            # 提取任务ID
+            task_id = None
+            if "] [任务" in message:
+                try:
+                    task_id = message.split("[任务")[1].split("]")[0]
+                except:
+                    pass
+            
+            if task_id:
+                # 获取当前文本内容
+                current_text = self.log_text.toPlainText()
+                lines = current_text.split('\n')
+                
+                # 从后往前查找该任务的最后一个进度行
+                progress_line_index = None
+                for i in range(len(lines) - 1, -1, -1):
+                    if f"[任务{task_id}]" in lines[i]:
+                        progress_line_index = i
+                        break
+                
+                # 更新或添加进度行
+                timestamp = time.strftime("%H:%M:%S")
+                message_clean = message.replace('\r', '')
+                log_entry = f"[{timestamp}] {message_clean}"
+                
+                if progress_line_index is not None:
+                    # 更新现有的进度行
+                    lines[progress_line_index] = log_entry
+                else:
+                    # 添加新的进度行
+                    lines.append(log_entry)
+                
+                # 更新文本内容
+                self.log_text.setPlainText('\n'.join(lines))
+                
+                # 自动滚动到底部
+                cursor = self.log_text.textCursor()
+                cursor.movePosition(QTextCursor.End)
+                self.log_text.setTextCursor(cursor)
+                return
         
-        # 单任务情况下保留进度行合并逻辑
-        if '%' in message and any(char.isdigit() for char in message):
-            self.update_progress_message(message)
-        else:
-            self.log_message(message)
+        # 对于非进度消息，直接添加新行
+        self.log_message(message)
         
     def log_message(self, message):
         """添加日志消息"""
@@ -690,12 +739,20 @@ class VideoDownloaderGUI(QMainWindow):
         current_text = self.log_text.toPlainText()
         lines = current_text.split('\n')
         
-        # 查找是否已有进度行（包含"下载进度"的行）
+        # 查找是否已有进度行（包含百分比的行）
         progress_line_index = None
-        for i, line in enumerate(lines):
-            if "下载进度:" in line:
-                progress_line_index = i
-                break
+        task_id = None
+        
+        # 从消息中提取任务ID
+        if "] [任务" in message:
+            task_id = message.split("[任务")[1].split("]")[0]
+        
+        if task_id:
+            # 从后往前查找该任务的最后一个进度行
+            for i in range(len(lines) - 1, -1, -1):
+                if f"[任务{task_id}]" in lines[i] and "%" in lines[i]:
+                    progress_line_index = i
+                    break
         
         if progress_line_index is not None:
             # 更新现有的进度行
