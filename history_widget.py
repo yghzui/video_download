@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (
     QMessageBox, QMenu, QAction, QProgressBar, QScrollArea
 )
 from PyQt5.QtCore import Qt, QSize, QThread, pyqtSignal, QTimer
-from PyQt5.QtGui import QPixmap, QIcon, QFont, QPalette, QColor
+from PyQt5.QtGui import QPixmap, QIcon, QFont, QPalette, QColor, QImage, QPainter
 
 from history_manager import HistoryManager
 
@@ -37,18 +37,50 @@ class HistoryItemWidget(QFrame):
         self.setLineWidth(1)
         # 设置固定高度，确保所有历史记录项高度一致
         self.setFixedHeight(100)
-        self.setStyleSheet("""
-            HistoryItemWidget {
-                background-color: #f8f9fa;
-                border: 1px solid #dee2e6;
-                border-radius: 8px;
-                margin: 2px;
-            }
-            HistoryItemWidget:hover {
-                background-color: #e9ecef;
-                border-color: #adb5bd;
-            }
-        """)
+        
+        # 根据记录状态设置样式
+        status = self.record_data.get('status', 'success')
+        if status == 'file_deleted':
+            # 文件已删除状态 - 深灰色显示
+            self.setStyleSheet("""
+                HistoryItemWidget {
+                    background-color: #d6d8db;
+                    border: 1px solid #868e96;
+                    border-radius: 8px;
+                    margin: 2px;
+                }
+                HistoryItemWidget:hover {
+                    background-color: #ced4da;
+                    border-color: #6c757d;
+                }
+                QLabel {
+                    color: #495057;
+                }
+                QPushButton {
+                    background-color: #adb5bd;
+                    color: #495057;
+                    border: 1px solid #868e96;
+                    border-radius: 4px;
+                }
+                QPushButton:hover {
+                    background-color: #868e96;
+                    color: #343a40;
+                }
+            """)
+        else:
+            # 正常状态
+            self.setStyleSheet("""
+                HistoryItemWidget {
+                    background-color: #f8f9fa;
+                    border: 1px solid #dee2e6;
+                    border-radius: 8px;
+                    margin: 2px;
+                }
+                HistoryItemWidget:hover {
+                    background-color: #e9ecef;
+                    border-color: #adb5bd;
+                }
+            """)
         
         # 主布局
         main_layout = QHBoxLayout(self)
@@ -60,13 +92,24 @@ class HistoryItemWidget(QFrame):
         thumbnail_width = int(thumbnail_height * 4 / 3)  # 4:3比例
         self.thumbnail_label = QLabel()
         self.thumbnail_label.setFixedSize(thumbnail_width, thumbnail_height)
-        self.thumbnail_label.setStyleSheet("""
-            QLabel {
-                border: 1px solid #ced4da;
-                border-radius: 4px;
-                background-color: #ffffff;
-            }
-        """)
+        # 根据状态设置缩略图样式
+        if status == 'file_deleted':
+            self.thumbnail_label.setStyleSheet("""
+                QLabel {
+                    border: 1px solid #868e96;
+                    border-radius: 4px;
+                    background-color: #ced4da;
+                    opacity: 0.5;
+                }
+            """)
+        else:
+            self.thumbnail_label.setStyleSheet("""
+                QLabel {
+                    border: 1px solid #ced4da;
+                    border-radius: 4px;
+                    background-color: #ffffff;
+                }
+            """)
         self.thumbnail_label.setAlignment(Qt.AlignCenter)
         # 不使用setScaledContents，改为在load_thumbnail中手动缩放
         
@@ -218,6 +261,8 @@ class HistoryItemWidget(QFrame):
     def load_thumbnail(self):
         """加载缩略图 - 以容器高度为标准等比缩放"""
         thumbnail_path = self.record_data.get('thumbnail_path', '')
+        status = self.record_data.get('status', 'success')
+        
         if thumbnail_path and os.path.exists(thumbnail_path):
             pixmap = QPixmap(thumbnail_path)
             if not pixmap.isNull():
@@ -237,19 +282,45 @@ class HistoryItemWidget(QFrame):
                         Qt.SmoothTransformation
                     )
                 
-                self.thumbnail_label.setPixmap(scaled_pixmap)
+                # 如果文件已删除，应用灰度滤镜
+                if status == 'file_deleted':
+                    # 转换为灰度图像
+                    gray_image = scaled_pixmap.toImage().convertToFormat(QImage.Format_Grayscale8)
+                    gray_pixmap = QPixmap.fromImage(gray_image)
+                    
+                    # 创建半透明效果
+                    painter = QPainter(gray_pixmap)
+                    painter.setCompositionMode(QPainter.CompositionMode_SourceAtop)
+                    painter.fillRect(gray_pixmap.rect(), QColor(255, 255, 255, 100))
+                    painter.end()
+                    
+                    self.thumbnail_label.setPixmap(gray_pixmap)
+                else:
+                    self.thumbnail_label.setPixmap(scaled_pixmap)
                 return
         
         # 显示默认图标
-        self.thumbnail_label.setText("🎬")
-        self.thumbnail_label.setStyleSheet("""
-            QLabel {
-                border: 1px solid #ced4da;
-                border-radius: 4px;
-                background-color: #f8f9fa;
-                font-size: 24px;
-            }
-        """)
+        if status == 'file_deleted':
+            self.thumbnail_label.setText("🎬")
+            self.thumbnail_label.setStyleSheet("""
+                QLabel {
+                    border: 1px solid #868e96;
+                    border-radius: 4px;
+                    background-color: #ced4da;
+                    font-size: 24px;
+                    color: #868e96;
+                }
+            """)
+        else:
+            self.thumbnail_label.setText("🎬")
+            self.thumbnail_label.setStyleSheet("""
+                QLabel {
+                    border: 1px solid #ced4da;
+                    border-radius: 4px;
+                    background-color: #f8f9fa;
+                    font-size: 24px;
+                }
+            """)
         
     def format_file_size(self, size_bytes):
         """格式化文件大小"""
