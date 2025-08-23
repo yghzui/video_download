@@ -35,6 +35,8 @@ class HistoryItemWidget(QFrame):
         """设置UI界面"""
         self.setFrameStyle(QFrame.Box)
         self.setLineWidth(1)
+        # 设置固定高度，确保所有历史记录项高度一致
+        self.setFixedHeight(100)
         self.setStyleSheet("""
             HistoryItemWidget {
                 background-color: #f8f9fa;
@@ -53,9 +55,11 @@ class HistoryItemWidget(QFrame):
         main_layout.setContentsMargins(10, 8, 10, 8)
         main_layout.setSpacing(12)
         
-        # 缩略图区域
+        # 缩略图区域 - 以容器高度为基准设置缩略图尺寸
+        thumbnail_height = 80  # 容器高度减去边距
+        thumbnail_width = int(thumbnail_height * 4 / 3)  # 4:3比例
         self.thumbnail_label = QLabel()
-        self.thumbnail_label.setFixedSize(80, 60)
+        self.thumbnail_label.setFixedSize(thumbnail_width, thumbnail_height)
         self.thumbnail_label.setStyleSheet("""
             QLabel {
                 border: 1px solid #ced4da;
@@ -64,7 +68,7 @@ class HistoryItemWidget(QFrame):
             }
         """)
         self.thumbnail_label.setAlignment(Qt.AlignCenter)
-        self.thumbnail_label.setScaledContents(True)
+        # 不使用setScaledContents，改为在load_thumbnail中手动缩放
         
         # 加载缩略图
         self.load_thumbnail()
@@ -153,11 +157,15 @@ class HistoryItemWidget(QFrame):
         
         # 操作按钮区域
         buttons_layout = QVBoxLayout()
-        buttons_layout.setSpacing(4)
+        buttons_layout.setSpacing(6)
+        buttons_layout.setAlignment(Qt.AlignCenter)  # 垂直居中对齐
+        
+        # 添加上方弹性空间
+        buttons_layout.addStretch()
         
         # 打开文件夹按钮
         open_folder_btn = QPushButton("📁 打开文件夹")
-        open_folder_btn.setFixedSize(100, 28)
+        open_folder_btn.setFixedSize(100, 30)
         open_folder_btn.setStyleSheet("""
             QPushButton {
                 background-color: #007bff;
@@ -175,11 +183,11 @@ class HistoryItemWidget(QFrame):
             }
         """)
         open_folder_btn.clicked.connect(self.open_folder)
-        buttons_layout.addWidget(open_folder_btn)
+        buttons_layout.addWidget(open_folder_btn, 0, Qt.AlignCenter)
         
         # 删除文件按钮
         delete_file_btn = QPushButton("🗑️ 删除文件")
-        delete_file_btn.setFixedSize(100, 28)
+        delete_file_btn.setFixedSize(100, 30)
         delete_file_btn.setStyleSheet("""
             QPushButton {
                 background-color: #dc3545;
@@ -197,11 +205,11 @@ class HistoryItemWidget(QFrame):
             }
         """)
         delete_file_btn.clicked.connect(self.delete_file)
-        buttons_layout.addWidget(delete_file_btn)
+        buttons_layout.addWidget(delete_file_btn, 0, Qt.AlignCenter)
         
         # 删除记录按钮
         delete_record_btn = QPushButton("❌ 删除记录")
-        delete_record_btn.setFixedSize(100, 28)
+        delete_record_btn.setFixedSize(100, 30)
         delete_record_btn.setStyleSheet("""
             QPushButton {
                 background-color: #6c757d;
@@ -219,18 +227,36 @@ class HistoryItemWidget(QFrame):
             }
         """)
         delete_record_btn.clicked.connect(self.delete_record)
-        buttons_layout.addWidget(delete_record_btn)
+        buttons_layout.addWidget(delete_record_btn, 0, Qt.AlignCenter)
         
+        # 添加下方弹性空间
         buttons_layout.addStretch()
+        
         main_layout.addLayout(buttons_layout)
         
     def load_thumbnail(self):
-        """加载缩略图"""
+        """加载缩略图 - 以容器高度为标准等比缩放"""
         thumbnail_path = self.record_data.get('thumbnail_path', '')
         if thumbnail_path and os.path.exists(thumbnail_path):
             pixmap = QPixmap(thumbnail_path)
             if not pixmap.isNull():
-                self.thumbnail_label.setPixmap(pixmap)
+                # 获取缩略图标签的实际尺寸
+                label_size = self.thumbnail_label.size()
+                
+                # 以高度为标准进行等比缩放，确保图片高度占满容器
+                scaled_pixmap = pixmap.scaledToHeight(
+                    label_size.height(),
+                    Qt.SmoothTransformation
+                )
+                
+                # 如果缩放后宽度超过容器宽度，则以宽度为标准缩放
+                if scaled_pixmap.width() > label_size.width():
+                    scaled_pixmap = pixmap.scaledToWidth(
+                        label_size.width(),
+                        Qt.SmoothTransformation
+                    )
+                
+                self.thumbnail_label.setPixmap(scaled_pixmap)
                 return
         
         # 显示默认图标
@@ -435,6 +461,7 @@ class HistoryWidget(QWidget):
         self.list_layout = QVBoxLayout(self.list_widget)
         self.list_layout.setContentsMargins(5, 5, 5, 5)
         self.list_layout.setSpacing(5)
+        self.list_layout.setAlignment(Qt.AlignTop)  # 设置顶部对齐
         
         self.scroll_area.setWidget(self.list_widget)
         layout.addWidget(self.scroll_area, 1)
@@ -554,6 +581,7 @@ class HistoryWidget(QWidget):
         item_widget.delete_file_requested.connect(self.delete_file)
         item_widget.delete_record_requested.connect(self.delete_record)
         
+        # 直接添加到布局末尾
         self.list_layout.addWidget(item_widget)
         
     def clear_list(self):
