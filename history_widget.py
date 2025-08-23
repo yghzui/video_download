@@ -156,7 +156,7 @@ class HistoryItemWidget(QFrame):
         info_layout.addStretch()
         main_layout.addLayout(info_layout, 1)
         
-        # 操作按钮区域
+        # 右侧：操作按钮区域
         buttons_layout = QVBoxLayout()
         buttons_layout.setSpacing(6)
         buttons_layout.setContentsMargins(0, 0, 0, 0)  # 移除上下边距
@@ -678,7 +678,7 @@ class HistoryWidget(QWidget):
                     os.remove(file_path)
                     
                 # 更新数据库记录状态
-                self.history_manager.update_record(record_id, {'status': 'file_deleted'})
+                self.history_manager.update_record(record_id, status='file_deleted')
                 
                 # 刷新界面
                 self.refresh_history()
@@ -699,7 +699,7 @@ class HistoryWidget(QWidget):
         
         if reply == QMessageBox.Yes:
             try:
-                self.history_manager.delete_record_by_id(record_id)
+                self.history_manager.delete_record(record_id)
                 self.refresh_history()
                 QMessageBox.information(self, "成功", "记录已删除")
             except Exception as e:
