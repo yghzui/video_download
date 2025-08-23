@@ -10,12 +10,138 @@ from datetime import datetime
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem,
     QLabel, QPushButton, QLineEdit, QComboBox, QFrame, QSizePolicy,
-    QMessageBox, QMenu, QAction, QProgressBar, QScrollArea
+    QMessageBox, QMenu, QAction, QProgressBar, QScrollArea, QApplication,
+    QInputDialog
 )
 from PyQt5.QtCore import Qt, QSize, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QPixmap, QIcon, QFont, QPalette, QColor, QImage, QPainter
 
 from history_manager import HistoryManager
+
+
+class ClickableLabel(QLabel):
+    """支持间隔双击重命名的标签"""
+    
+    # 信号定义
+    rename_requested = pyqtSignal()  # 重命名请求信号
+    
+    def __init__(self, text="", parent=None):
+        super().__init__(text, parent)
+        self.original_text = text
+        self.edit_mode = False
+        self.line_edit = None
+        
+        # 设置右键菜单
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_context_menu)
+
+    def show_context_menu(self, position):
+        """显示右键菜单"""
+        if self.edit_mode:
+            return
+            
+        menu = QMenu(self)
+        rename_action = menu.addAction("重命名文件")
+        rename_action.triggered.connect(self.request_file_rename)
+        
+        menu.exec_(self.mapToGlobal(position))
+    
+    def request_file_rename(self):
+        """请求文件重命名"""
+        # 发出重命名信号，让父组件处理文件重命名逻辑
+        self.rename_requested.emit()
+    
+    def start_edit_mode(self):
+        """开始编辑模式"""
+        if self.edit_mode:
+            return
+            
+        self.edit_mode = True
+        self.original_text = self.text()
+        
+        # 创建编辑框
+        self.line_edit = QLineEdit(self.original_text)
+        self.line_edit.setFont(self.font())
+        self.line_edit.setStyleSheet(self.styleSheet())
+        
+        # 替换标签为编辑框
+        layout = self.parent().layout()
+        if layout:
+            index = layout.indexOf(self)
+            if index >= 0:
+                layout.removeWidget(self)
+                layout.insertWidget(index, self.line_edit)
+                self.hide()
+                
+                # 连接信号
+                self.line_edit.editingFinished.connect(self.finish_edit_mode)
+                self.line_edit.returnPressed.connect(self.finish_edit_mode)
+                
+                # 选中所有文本并获得焦点
+                self.line_edit.selectAll()
+                self.line_edit.setFocus()
+    
+    def finish_edit_mode(self):
+        """结束编辑模式"""
+        if not self.edit_mode or not self.line_edit:
+            return
+            
+        new_text = self.line_edit.text().strip()
+        
+        # 恢复标签
+        layout = self.parent().layout()
+        if layout:
+            index = layout.indexOf(self.line_edit)
+            if index >= 0:
+                layout.removeWidget(self.line_edit)
+                layout.insertWidget(index, self)
+                self.show()
+        
+        # 清理编辑框
+        self.line_edit.deleteLater()
+        self.line_edit = None
+        self.edit_mode = False
+        
+        # 如果文本有变化，发出重命名信号
+        if new_text and new_text != self.original_text:
+            self.setText(new_text)
+            self.rename_requested.emit(new_text)
+
+
+class CopyableLabel(QLabel):
+    """支持右键复制的标签"""
+    
+    def __init__(self, text="", parent=None):
+        super().__init__(text, parent)
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_context_menu)
+    
+    def show_context_menu(self, position):
+        """显示右键菜单"""
+        menu = QMenu(self)
+        
+        # 复制链接动作
+        copy_action = QAction("复制链接", self)
+        copy_action.triggered.connect(self.copy_url)
+        menu.addAction(copy_action)
+        
+        # 显示菜单
+        menu.exec_(self.mapToGlobal(position))
+    
+    def copy_url(self):
+        """复制URL到剪贴板"""
+        text = self.text()
+        # 提取URL部分（去掉"链接: "前缀）
+        if text.startswith("链接: "):
+            url = text[4:]  # 去掉"链接: "前缀
+        else:
+            url = text
+        
+        clipboard = QApplication.clipboard()
+        clipboard.setText(url)
+        
+        # 可以添加提示信息
+        print(f"已复制链接: {url}")
 
 
 class HistoryItemWidget(QFrame):
@@ -26,6 +152,7 @@ class HistoryItemWidget(QFrame):
     delete_file_requested = pyqtSignal(int, str)  # 删除文件信号 (record_id, file_path)
     delete_record_requested = pyqtSignal(int)  # 删除记录信号
     redownload_requested = pyqtSignal(str, int)  # 重新下载信号 (url, record_id)
+    rename_requested = pyqtSignal(int, str)  # 重命名信号 (record_id, new_name)
     
     def __init__(self, record_data, parent=None):
         super().__init__(parent)
@@ -124,7 +251,7 @@ class HistoryItemWidget(QFrame):
         info_layout = QVBoxLayout()
         info_layout.setSpacing(4)
         
-        # 标题（使用文件名，去除扩展名）
+        # 标题（使用文件名，去除扩展名）- 支持双击重命名
         file_path = self.record_data.get('file_path', '')
         if file_path:
             # 获取文件名并去除扩展名
@@ -133,20 +260,22 @@ class HistoryItemWidget(QFrame):
         else:
             title_text = self.record_data.get('title', '未知标题')
         
-        title_label = QLabel(title_text)
-        title_label.setFont(QFont('Microsoft YaHei', 10, QFont.Bold))
-        title_label.setStyleSheet("color: #212529;")
-        title_label.setWordWrap(True)
-        info_layout.addWidget(title_label)
+        self.title_label = ClickableLabel(title_text)
+        self.title_label.setFont(QFont('Microsoft YaHei', 10, QFont.Bold))
+        self.title_label.setStyleSheet("color: #212529;")
+        self.title_label.setWordWrap(True)
+        # 连接重命名信号
+        self.title_label.rename_requested.connect(self.on_title_rename)
+        info_layout.addWidget(self.title_label)
         
-        # URL（完整显示，支持自动换行）
+        # URL（完整显示，支持自动换行和右键复制）
         full_url = self.record_data.get('url', '')
-        url_label = QLabel(f"链接: {full_url}")
-        url_label.setFont(QFont('Microsoft YaHei', 8))
-        url_label.setStyleSheet("color: #6c757d;")
-        url_label.setWordWrap(True)  # 启用自动换行
-        url_label.setTextInteractionFlags(Qt.TextSelectableByMouse)  # 允许选择文本
-        info_layout.addWidget(url_label)
+        self.url_label = CopyableLabel(f"链接: {full_url}")
+        self.url_label.setFont(QFont('Microsoft YaHei', 8))
+        self.url_label.setStyleSheet("color: #6c757d;")
+        self.url_label.setWordWrap(True)  # 启用自动换行
+        self.url_label.setTextInteractionFlags(Qt.TextSelectableByMouse)  # 允许选择文本
+        info_layout.addWidget(self.url_label)
         
         # 文件路径
         file_path = self.record_data.get('file_path', '')
@@ -388,6 +517,33 @@ class HistoryItemWidget(QFrame):
         record_id = self.record_data.get('id')
         if url and record_id:
             self.redownload_requested.emit(url, record_id)
+    
+    def on_title_rename(self):
+        """处理标题重命名"""
+        record_id = self.record_data.get('id')
+        if record_id:
+            # 弹出重命名对话框
+            current_file_path = self.record_data.get('file_path', '')
+            if not current_file_path or not os.path.exists(current_file_path):
+                QMessageBox.warning(self, "错误", "文件不存在，无法重命名")
+                return
+                
+            # 获取当前文件名（不含扩展名）
+            current_name = os.path.splitext(os.path.basename(current_file_path))[0]
+            
+            # 弹出输入对话框
+            new_name, ok = QInputDialog.getText(
+                self, "重命名文件", 
+                "请输入新的文件名（不含扩展名）:", 
+                QLineEdit.Normal, 
+                current_name
+            )
+            
+            if ok and new_name.strip():
+                # 发出重命名信号，让父组件处理文件重命名逻辑
+                print(f"[DEBUG] 发出重命名信号: record_id={record_id}, new_name={new_name.strip()}")
+                self.rename_requested.emit(record_id, new_name.strip())
+                print(f"[DEBUG] 重命名信号已发出")
 
 
 class HistoryWidget(QWidget):
@@ -671,6 +827,7 @@ class HistoryWidget(QWidget):
         item_widget.delete_file_requested.connect(self.delete_file)
         item_widget.delete_record_requested.connect(self.delete_record)
         item_widget.redownload_requested.connect(self.redownload)
+        item_widget.rename_requested.connect(self.rename_file)  # 连接重命名信号
         
         # 直接添加到布局末尾
         self.list_layout.addWidget(item_widget)
@@ -890,4 +1047,51 @@ class HistoryWidget(QWidget):
                 
         except Exception as e:
             print(f"重新下载时出错: {e}")
-            QMessageBox.warning(self, "错误", f"重新下载失败: {e}")
+    
+    def rename_file(self, record_id, new_name):
+        """重命名文件"""
+        print(f"[DEBUG] rename_file被调用: record_id={record_id}, new_name={new_name}")
+        try:
+            # 从数据库获取记录信息
+            target_record = self.history_manager.get_record_by_id(record_id)
+            print(f"[DEBUG] 获取到的记录: {target_record}")
+            
+            if not target_record:
+                QMessageBox.warning(self, "错误", "找不到对应的记录")
+                return
+                
+            old_file_path = target_record.get('file_path', '')
+            if not old_file_path or not os.path.exists(old_file_path):
+                QMessageBox.warning(self, "错误", "原文件不存在")
+                return
+            
+            # 构建新的文件路径
+            file_dir = os.path.dirname(old_file_path)
+            file_ext = os.path.splitext(old_file_path)[1]  # 保持原扩展名
+            new_file_path = os.path.join(file_dir, new_name + file_ext)
+            
+            # 检查新文件名是否已存在
+            if os.path.exists(new_file_path):
+                reply = QMessageBox.question(
+                    self, "文件已存在", 
+                    f"文件 '{new_name + file_ext}' 已存在，是否覆盖？",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+                if reply != QMessageBox.Yes:
+                    return
+            
+            # 重命名文件
+            os.rename(old_file_path, new_file_path)
+            
+            # 更新数据库中的文件路径
+            self.history_manager.update_record(record_id, file_path=new_file_path)
+            
+            # 刷新界面
+            self.refresh_history()
+            
+            QMessageBox.information(self, "成功", f"文件已重命名为: {new_name + file_ext}")
+            
+        except Exception as e:
+            QMessageBox.warning(self, "错误", f"重命名文件失败: {e}")
+            print(f"重命名文件时出错: {e}")
