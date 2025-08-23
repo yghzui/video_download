@@ -400,6 +400,83 @@ class HistoryManager:
                 }
             return None
     
+    def file_path_exists(self, file_path: str) -> Optional[Dict]:
+        """检查文件路径是否已存在于历史记录中
+        
+        Args:
+            file_path: 要检查的文件路径
+            
+        Returns:
+            Optional[Dict]: 如果存在返回记录信息，否则返回None
+        """
+        if not file_path:
+            return None
+            
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT id, url, title, status, download_time, platform, file_path
+                FROM download_history 
+                WHERE file_path = ? 
+                ORDER BY download_time DESC 
+                LIMIT 1
+            """, (file_path,))
+            
+            row = cursor.fetchone()
+            if row:
+                return {
+                    'id': row[0],
+                    'url': row[1],
+                    'title': row[2],
+                    'status': row[3],
+                    'download_time': row[4],
+                    'platform': row[5],
+                    'file_path': row[6]
+                }
+            return None
+    
+    def check_duplicate_by_file_path(self, url: str, potential_file_path: str = None) -> Optional[Dict]:
+        """基于文件路径检查重复下载
+        
+        Args:
+            url: 视频URL
+            potential_file_path: 潜在的文件路径（如果已知）
+            
+        Returns:
+            Optional[Dict]: 如果存在重复返回记录信息，否则返回None
+        """
+        # 如果提供了潜在文件路径，直接检查
+        if potential_file_path:
+            return self.file_path_exists(potential_file_path)
+        
+        # 否则，查找该URL的所有成功下载记录，检查文件是否仍然存在
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT id, url, title, status, download_time, platform, file_path
+                FROM download_history 
+                WHERE url = ? AND status = 'success' AND file_path IS NOT NULL
+                ORDER BY download_time DESC
+            """, (url,))
+            
+            rows = cursor.fetchall()
+            for row in rows:
+                file_path = row[6]
+                if file_path and os.path.exists(file_path):
+                    return {
+                        'id': row[0],
+                        'url': row[1],
+                        'title': row[2],
+                        'status': row[3],
+                        'download_time': row[4],
+                        'platform': row[5],
+                        'file_path': row[6]
+                    }
+            
+            return None
+    
     def get_platforms(self) -> List[str]:
         """获取所有平台列表
         

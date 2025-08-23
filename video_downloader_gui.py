@@ -974,24 +974,31 @@ class VideoDownloaderGUI(QMainWindow):
             QMessageBox.warning(self, "警告", "请输入有效的视频链接！")
             return
         
-        # 检查重复下载
+        # 检查重复下载并记录现有记录ID（基于文件路径）
         duplicate_urls = []
         valid_urls = []
+        url_record_map = {}  # 存储URL到记录ID的映射
         
         for url in urls:
-            existing_record = self.history_manager.url_exists(url)
+            # 使用新的基于文件路径的重复检查方法
+            existing_record = self.history_manager.check_duplicate_by_file_path(url)
             if existing_record:
                 status = existing_record.get('status')
                 title = existing_record.get('title', url)
-                if status == 'success':
-                    duplicate_urls.append(f"• {title} (已成功下载)")
+                record_id = existing_record.get('id')
+                file_path = existing_record.get('file_path', '')
+                url_record_map[url] = record_id  # 记录URL对应的记录ID
+                
+                if status == 'success' and file_path and os.path.exists(file_path):
+                    duplicate_urls.append(f"• {title} (文件已存在: {os.path.basename(file_path)})")
                 elif status == 'downloading':
                     duplicate_urls.append(f"• {title} (正在下载中)")
                 else:
-                    # 失败的记录可以重新下载
+                    # 失败的记录或文件不存在可以重新下载
                     valid_urls.append(url)
             else:
                 valid_urls.append(url)
+                url_record_map[url] = None  # 新URL没有现有记录
         
         # 如果有重复的URL，询问用户是否继续
         if duplicate_urls:
@@ -1011,8 +1018,9 @@ class VideoDownloaderGUI(QMainWindow):
                     urls = valid_urls
             # 如果用户选择Yes，则继续下载所有URL
          
-        # 初始化任务队列
+        # 初始化任务队列，同时保存URL到记录ID的映射
         self.pending_urls = urls.copy()
+        self.url_record_map = url_record_map  # 保存映射关系供_start_next_workers使用
         self.completed_results = []
          
         if len(urls) > 1:
@@ -1125,7 +1133,15 @@ class VideoDownloaderGUI(QMainWindow):
         while self.pending_urls and len(self.active_workers) < self.max_concurrency:
             url = self.pending_urls.pop(0)
             task_name = f"任务{len(self.completed_results) + len(self.active_workers) + 1}"
-            worker = DownloadWorker(url, self._common_token, self._common_download_dir, task_name, self.history_manager)
+            
+            # 获取现有记录ID（如果有的话）
+            existing_record_id = None
+            if hasattr(self, 'url_record_map') and url in self.url_record_map:
+                existing_record_id = self.url_record_map[url]
+                if existing_record_id:
+                    task_name = f"重新下载-{existing_record_id}"
+            
+            worker = DownloadWorker(url, self._common_token, self._common_download_dir, task_name, self.history_manager, existing_record_id)
             worker.progress_signal.connect(self.update_log)
             # 使用lambda捕获worker引用以便识别
             worker.finished_signal.connect(lambda success, message, w=worker: self._on_worker_finished(success, message, w))
