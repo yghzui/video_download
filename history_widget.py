@@ -73,9 +73,10 @@ class HistoryItemWidget(QFrame):
         # 加载缩略图
         self.load_thumbnail()
         
+        # 左侧：缩略图区域
         main_layout.addWidget(self.thumbnail_label)
         
-        # 信息区域
+        # 中间：信息区域
         info_layout = QVBoxLayout()
         info_layout.setSpacing(4)
         
@@ -158,79 +159,59 @@ class HistoryItemWidget(QFrame):
         # 操作按钮区域
         buttons_layout = QVBoxLayout()
         buttons_layout.setSpacing(6)
-        buttons_layout.setAlignment(Qt.AlignCenter)  # 垂直居中对齐
-        
-        # 添加上方弹性空间
-        buttons_layout.addStretch()
+        buttons_layout.setContentsMargins(0, 0, 0, 0)  # 移除上下边距
+        buttons_layout.setAlignment(Qt.AlignTop)  # 顶部对齐
         
         # 打开文件夹按钮
-        open_folder_btn = QPushButton("📁 打开文件夹")
-        open_folder_btn.setFixedSize(100, 30)
+        open_folder_btn = QPushButton("📁")
+        open_folder_btn.setFixedSize(35, 35)
+        open_folder_btn.setToolTip("打开文件夹")  # 悬浮提示
         open_folder_btn.setStyleSheet("""
             QPushButton {
-                background-color: #007bff;
-                color: white;
+                background: transparent;
                 border: none;
-                border-radius: 4px;
-                font-size: 11px;
-                font-weight: bold;
+                font-size: 16px;
             }
             QPushButton:hover {
-                background-color: #0056b3;
-            }
-            QPushButton:pressed {
-                background-color: #004085;
+                font-size: 18px;
             }
         """)
         open_folder_btn.clicked.connect(self.open_folder)
         buttons_layout.addWidget(open_folder_btn, 0, Qt.AlignCenter)
         
         # 删除文件按钮
-        delete_file_btn = QPushButton("🗑️ 删除文件")
-        delete_file_btn.setFixedSize(100, 30)
+        delete_file_btn = QPushButton("🗑️")
+        delete_file_btn.setFixedSize(35, 35)
+        delete_file_btn.setToolTip("删除文件")  # 悬浮提示
         delete_file_btn.setStyleSheet("""
             QPushButton {
-                background-color: #dc3545;
-                color: white;
+                background: transparent;
                 border: none;
-                border-radius: 4px;
-                font-size: 11px;
-                font-weight: bold;
+                font-size: 16px;
             }
             QPushButton:hover {
-                background-color: #c82333;
-            }
-            QPushButton:pressed {
-                background-color: #a71e2a;
+                font-size: 18px;
             }
         """)
         delete_file_btn.clicked.connect(self.delete_file)
         buttons_layout.addWidget(delete_file_btn, 0, Qt.AlignCenter)
         
         # 删除记录按钮
-        delete_record_btn = QPushButton("❌ 删除记录")
-        delete_record_btn.setFixedSize(100, 30)
+        delete_record_btn = QPushButton("❌")
+        delete_record_btn.setFixedSize(35, 35)
+        delete_record_btn.setToolTip("删除记录")  # 悬浮提示
         delete_record_btn.setStyleSheet("""
             QPushButton {
-                background-color: #6c757d;
-                color: white;
+                background: transparent;
                 border: none;
-                border-radius: 4px;
-                font-size: 11px;
-                font-weight: bold;
+                font-size: 16px;
             }
             QPushButton:hover {
-                background-color: #545b62;
-            }
-            QPushButton:pressed {
-                background-color: #3d4147;
+                font-size: 18px;
             }
         """)
         delete_record_btn.clicked.connect(self.delete_record)
         buttons_layout.addWidget(delete_record_btn, 0, Qt.AlignCenter)
-        
-        # 添加下方弹性空间
-        buttons_layout.addStretch()
         
         main_layout.addLayout(buttons_layout)
         
