@@ -153,11 +153,122 @@ class UrlTextEdit(QTextEdit):
     右键菜单在识别到链接（优先使用选中文本，否则使用剪贴板文本）时，提供：
     - 换行追加链接：在末尾换行并追加该链接
     - 替换为该链接：用该链接替换全部内容
+    内置悬浮按钮：清除内容和粘贴并下载
     """
     def __init__(self, parent=None):
         super().__init__(parent)
         # 仅接受纯文本，防止富文本粘贴带入样式
         self.setAcceptRichText(False)
+        
+        # 创建内部悬浮按钮
+        self._create_floating_buttons()
+        
+    def _create_floating_buttons(self):
+        """创建内部悬浮按钮"""
+        # 清除按钮
+        self.clear_btn = QPushButton("×", self)
+        self.clear_btn.setFixedSize(20, 20)
+        self.clear_btn.setToolTip("清除输入框内容")
+        self.clear_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #e74c3c;
+                color: white;
+                border: none;
+                border-radius: 10px;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #c0392b;
+            }
+            QPushButton:pressed {
+                background-color: #a93226;
+            }
+        """)
+        self.clear_btn.clicked.connect(self._clear_content)
+        
+        # 粘贴并下载按钮
+        self.paste_download_btn = QPushButton("📋↓", self)
+        self.paste_download_btn.setFixedSize(20, 20)
+        self.paste_download_btn.setToolTip("粘贴剪切板内容并开始下载")
+        self.paste_download_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 10px;
+                font-size: 10px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #2ecc71;
+            }
+            QPushButton:pressed {
+                background-color: #229954;
+            }
+        """)
+        self.paste_download_btn.clicked.connect(self._paste_and_download)
+        
+        # 初始隐藏按钮
+        self.clear_btn.hide()
+        self.paste_download_btn.hide()
+        
+    def _clear_content(self):
+        """清除输入框内容"""
+        self.clear()
+        
+    def _paste_and_download(self):
+        """粘贴剪切板内容并触发下载"""
+        clipboard = QApplication.clipboard()
+        if clipboard:
+            clip_text = clipboard.text()
+            if clip_text.strip():
+                self.setPlainText(clip_text.strip())
+                # 触发父窗口的下载功能
+                parent_window = self.window()
+                if hasattr(parent_window, 'start_download'):
+                    parent_window.start_download()
+                    
+    def resizeEvent(self, event):
+        """重写resize事件，调整按钮位置"""
+        super().resizeEvent(event)
+        self._update_button_positions()
+        
+    def _update_button_positions(self):
+        """更新按钮位置"""
+        # 获取输入框的几何信息
+        rect = self.rect()
+        button_margin = 3  # 距离边框的距离
+        
+        # 计算可用的垂直空间
+        available_height = rect.height() - 2 * button_margin
+        button_height = self.clear_btn.height()
+        
+        # 计算两个按钮的垂直位置，使其均匀分布
+        # 将可用空间分为3等份：上间距、中间距、下间距
+        spacing = (available_height - 2 * button_height) / 3
+        
+        # 清除按钮位置（上方1/3处）
+        clear_x = rect.width() - self.clear_btn.width() - button_margin
+        clear_y = button_margin + spacing
+        self.clear_btn.move(clear_x, int(clear_y))
+        
+        # 粘贴下载按钮位置（下方2/3处）
+        paste_x = rect.width() - self.paste_download_btn.width() - button_margin
+        paste_y = clear_y + button_height + spacing
+        self.paste_download_btn.move(paste_x, int(paste_y))
+        
+    def enterEvent(self, event):
+        """鼠标进入时显示按钮"""
+        super().enterEvent(event)
+        self.clear_btn.show()
+        self.paste_download_btn.show()
+        
+    def leaveEvent(self, event):
+        """鼠标离开时隐藏按钮"""
+        super().leaveEvent(event)
+        self.clear_btn.hide()
+        self.paste_download_btn.hide()
 
     def contextMenuEvent(self, event):
         # 使用系统默认菜单作为基础
@@ -924,4 +1035,4 @@ def main():
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
-    main() 
+    main()
