@@ -124,17 +124,28 @@ class HistoryItemWidget(QFrame):
         info_layout = QVBoxLayout()
         info_layout.setSpacing(4)
         
-        # 标题
-        title_label = QLabel(self.record_data.get('title', '未知标题'))
+        # 标题（使用文件名，去除扩展名）
+        file_path = self.record_data.get('file_path', '')
+        if file_path:
+            # 获取文件名并去除扩展名
+            file_name = os.path.basename(file_path)
+            title_text = os.path.splitext(file_name)[0]  # 去除扩展名
+        else:
+            title_text = self.record_data.get('title', '未知标题')
+        
+        title_label = QLabel(title_text)
         title_label.setFont(QFont('Microsoft YaHei', 10, QFont.Bold))
         title_label.setStyleSheet("color: #212529;")
         title_label.setWordWrap(True)
         info_layout.addWidget(title_label)
         
-        # URL
-        url_label = QLabel(f"链接: {self.record_data.get('url', '')[:50]}...")
+        # URL（完整显示，支持自动换行）
+        full_url = self.record_data.get('url', '')
+        url_label = QLabel(f"链接: {full_url}")
         url_label.setFont(QFont('Microsoft YaHei', 8))
         url_label.setStyleSheet("color: #6c757d;")
+        url_label.setWordWrap(True)  # 启用自动换行
+        url_label.setTextInteractionFlags(Qt.TextSelectableByMouse)  # 允许选择文本
         info_layout.addWidget(url_label)
         
         # 文件路径
