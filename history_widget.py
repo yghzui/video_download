@@ -25,6 +25,7 @@ class HistoryItemWidget(QFrame):
     open_folder_requested = pyqtSignal(str)  # 打开文件夹信号
     delete_file_requested = pyqtSignal(int, str)  # 删除文件信号 (record_id, file_path)
     delete_record_requested = pyqtSignal(int)  # 删除记录信号
+    redownload_requested = pyqtSignal(str, int)  # 重新下载信号 (url, record_id)
     
     def __init__(self, record_data, parent=None):
         super().__init__(parent)
@@ -239,6 +240,23 @@ class HistoryItemWidget(QFrame):
         delete_file_btn.clicked.connect(self.delete_file)
         buttons_layout.addWidget(delete_file_btn, 0, Qt.AlignCenter)
         
+        # 重新下载按钮
+        redownload_btn = QPushButton("🔄")
+        redownload_btn.setFixedSize(35, 35)
+        redownload_btn.setToolTip("重新下载")  # 悬浮提示
+        redownload_btn.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                border: none;
+                font-size: 16px;
+            }
+            QPushButton:hover {
+                font-size: 18px;
+            }
+        """)
+        redownload_btn.clicked.connect(self.redownload)
+        buttons_layout.addWidget(redownload_btn, 0, Qt.AlignCenter)
+        
         # 删除记录按钮
         delete_record_btn = QPushButton("❌")
         delete_record_btn.setFixedSize(35, 35)
@@ -352,6 +370,13 @@ class HistoryItemWidget(QFrame):
         record_id = self.record_data.get('id')
         if record_id:
             self.delete_record_requested.emit(record_id)
+            
+    def redownload(self):
+        """重新下载"""
+        url = self.record_data.get('url', '')
+        record_id = self.record_data.get('id')
+        if url and record_id:
+            self.redownload_requested.emit(url, record_id)
 
 
 class HistoryWidget(QWidget):
@@ -597,8 +622,10 @@ class HistoryWidget(QWidget):
             else:
                 self.current_records.extend(records)
                 
-            # 添加记录到界面
+            # 添加记录到界面并检查缩略图
             for record in records:
+                # 检查并重新提取缺失的缩略图
+                self.check_and_extract_thumbnail(record)
                 self.add_history_item(record)
                 
             # 更新统计信息
@@ -632,6 +659,7 @@ class HistoryWidget(QWidget):
         item_widget.open_folder_requested.connect(self.open_folder)
         item_widget.delete_file_requested.connect(self.delete_file)
         item_widget.delete_record_requested.connect(self.delete_record)
+        item_widget.redownload_requested.connect(self.redownload)
         
         # 直接添加到布局末尾
         self.list_layout.addWidget(item_widget)
@@ -775,3 +803,80 @@ class HistoryWidget(QWidget):
                 QMessageBox.information(self, "成功", "记录已删除")
             except Exception as e:
                 QMessageBox.warning(self, "错误", f"删除记录失败: {e}")
+                
+    def check_and_extract_thumbnail(self, record):
+        """检查并重新提取缺失的缩略图"""
+        try:
+            from thumbnail_extractor import ThumbnailExtractor
+            import os
+            
+            file_path = record.get('file_path', '')
+            thumbnail_path = record.get('thumbnail_path', '')
+            
+            # 检查是否为视频文件
+            if not file_path or not os.path.exists(file_path):
+                return
+                
+            video_extensions = ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v']
+            if not any(file_path.lower().endswith(ext) for ext in video_extensions):
+                return
+                
+            # 检查缩略图是否存在且有效
+            need_extract = False
+            if not thumbnail_path or not os.path.exists(thumbnail_path):
+                need_extract = True
+            else:
+                # 检查缩略图文件是否损坏（文件大小为0或无法读取）
+                try:
+                    if os.path.getsize(thumbnail_path) == 0:
+                        need_extract = True
+                    else:
+                        # 尝试加载图片验证是否有效
+                        from PyQt5.QtGui import QPixmap
+                        pixmap = QPixmap(thumbnail_path)
+                        if pixmap.isNull():
+                            need_extract = True
+                except Exception:
+                    need_extract = True
+                    
+            # 如果需要重新提取缩略图
+            if need_extract:
+                print(f"正在重新提取缩略图: {os.path.basename(file_path)}")
+                extractor = ThumbnailExtractor()
+                new_thumbnail_path = extractor.extract_thumbnail(file_path)
+                
+                if new_thumbnail_path and os.path.exists(new_thumbnail_path):
+                    # 更新数据库中的缩略图路径
+                    record_id = record.get('id')
+                    if record_id:
+                        self.history_manager.update_record(record_id, thumbnail_path=new_thumbnail_path)
+                        record['thumbnail_path'] = new_thumbnail_path  # 更新内存中的记录
+                        print(f"缩略图重新提取成功: {new_thumbnail_path}")
+                else:
+                    print(f"缩略图提取失败: {file_path}")
+                    
+        except Exception as e:
+            print(f"检查缩略图时出错: {e}")
+    
+    def redownload(self, url, record_id):
+        """重新下载"""
+        try:
+            # 获取主窗口的下载功能
+            main_window = self.parent()
+            while main_window and not hasattr(main_window, 'add_redownload_task'):
+                main_window = main_window.parent()
+            
+            if main_window and hasattr(main_window, 'add_redownload_task'):
+                # 切换到下载页面
+                if hasattr(main_window, 'tab_widget'):
+                    main_window.tab_widget.setCurrentIndex(0)  # 假设下载页面是第一个标签页
+                
+                # 添加重新下载任务
+                main_window.add_redownload_task(url, record_id)
+                QMessageBox.information(self, "成功", "已添加到下载队列")
+            else:
+                QMessageBox.warning(self, "错误", "无法找到下载功能")
+                
+        except Exception as e:
+            print(f"重新下载时出错: {e}")
+            QMessageBox.warning(self, "错误", f"重新下载失败: {e}")

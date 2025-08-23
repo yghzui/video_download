@@ -66,8 +66,9 @@ class DownloadWorker(QThread):
     progress_signal = pyqtSignal(str)  # 进度信息信号
     download_progress_signal = pyqtSignal(int)  # 下载进度信号（保留，当前未精细使用）
     finished_signal = pyqtSignal(bool, str)  # 完成信号
+    status_changed_signal = pyqtSignal()  # 状态变化信号
     
-    def __init__(self, url, token=None, download_dir="downloads", task_name="", history_manager=None):
+    def __init__(self, url, token=None, download_dir="downloads", task_name="", history_manager=None, existing_record_id=None):
         super().__init__()
         self.url = url
         self.token = token
@@ -78,9 +79,17 @@ class DownloadWorker(QThread):
         self.video_title = None  # 视频标题
         self.platform = None  # 平台类型
         self.history_manager = history_manager
+        self.history_record_id = existing_record_id  # 历史记录ID，可能是现有的
         
         # 初始化缩略图提取器
         self.thumbnail_extractor = ThumbnailExtractor()
+        
+        # 如果没有现有记录ID，则创建新的历史记录条目
+        if not existing_record_id:
+            self._create_initial_history_record()
+        else:
+            # 重用现有记录，更新状态为下载中
+            self._update_existing_record_status()
         
     def run(self):
         """运行下载任务（通过调用子进程执行 video_downloader.py 的一次性下载）"""
@@ -193,25 +202,104 @@ class DownloadWorker(QThread):
         except Exception as e:
             print(f"解析下载信息时出错: {e}")
     
-    def _save_history_record(self, success: bool, error_msg: str = None):
-        """保存历史记录"""
+    def _create_initial_history_record(self):
+        """创建初始历史记录条目"""
         try:
             if not self.history_manager:
+                return
+                
+            # 创建初始记录，状态为downloading
+            self.history_record_id = self.history_manager.add_record(
+                url=self.url,
+                title=self.task_name,  # 使用任务名作为初始标题
+                status='downloading',
+                platform="检测中...",
+                thumbnail_path="thumbnails/default_thumb.jpg"  # 使用默认缩略图
+            )
+            
+            # 发出状态变化信号
+            self.status_changed_signal.emit()
+            
+        except Exception as e:
+            print(f"创建初始历史记录时出错: {e}")
+    
+    def _update_existing_record_status(self):
+        """更新现有记录状态为下载中"""
+        try:
+            if not self.history_manager or not self.history_record_id:
+                return
+                
+            # 更新现有记录状态为downloading
+            self.history_manager.update_record(self.history_record_id, {
+                'status': 'downloading',
+                'download_time': time.strftime('%Y-%m-%d %H:%M:%S'),
+                'error_msg': None  # 清除之前的错误信息
+            })
+            
+            # 发出状态变化信号
+            self.status_changed_signal.emit()
+            
+        except Exception as e:
+            print(f"更新现有记录状态时出错: {e}")
+    
+    def _save_history_record(self, success: bool, error_msg: str = None):
+        """更新历史记录"""
+        try:
+            if not self.history_manager or not self.history_record_id:
+                print(f"无法更新历史记录: history_manager={self.history_manager}, record_id={self.history_record_id}")
                 return
                 
             # 如果没有下载文件信息但成功了，尝试从下载目录查找
             if success and not self.downloaded_files:
                 self._find_downloaded_files()
             
-            # 为每个下载的文件创建记录
+            # 准备更新数据
+            update_data = {
+                'title': self.video_title or self.task_name,
+                'platform': self.platform or "未知平台",
+                'status': 'success' if success else 'failed',
+                'download_time': time.strftime('%Y-%m-%d %H:%M:%S')
+            }
+            
+            # 如果下载失败，添加错误信息
+            if not success:
+                update_data['error_msg'] = error_msg or "下载失败"
+            else:
+                # 成功时清除错误信息
+                update_data['error_msg'] = None
+            
+            # 如果有下载文件，更新第一个文件的信息
             if self.downloaded_files:
-                for file_info in self.downloaded_files:
-                    # 获取缩略图路径
-                    thumbnail_path = self.thumbnail_extractor.get_thumbnail_path(file_info['path'])
+                file_info = self.downloaded_files[0]  # 取第一个文件
+                # 实际提取缩略图
+                thumbnail_path = None
+                video_extensions = ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v']
+                if any(file_info['path'].lower().endswith(ext) for ext in video_extensions):
+                    print(f"正在为 {file_info['name']} 提取缩略图...")
+                    thumbnail_path = self.thumbnail_extractor.extract_thumbnail(file_info['path'])
+                    print(f"缩略图提取结果: {thumbnail_path}")
+                else:
+                    print(f"文件 {file_info['name']} 不是视频文件，跳过缩略图提取")
+                
+                update_data.update({
+                    'file_path': file_info['path'],
+                    'file_name': file_info['name'],
+                    'file_size': file_info['size'],
+                    'thumbnail_path': thumbnail_path
+                })
+                
+                # 如果有多个文件，为其他文件创建新记录
+                for file_info in self.downloaded_files[1:]:
+                    # 为每个额外文件也提取缩略图
+                    thumbnail_path = None
+                    if any(file_info['path'].lower().endswith(ext) for ext in video_extensions):
+                        print(f"正在为 {file_info['name']} 提取缩略图...")
+                        thumbnail_path = self.thumbnail_extractor.extract_thumbnail(file_info['path'])
+                        print(f"缩略图提取结果: {thumbnail_path}")
                     
                     self.history_manager.add_record(
                         url=self.url,
-                        title=self.video_title or "未知标题",
+                        title=self.video_title or self.task_name,
                         file_path=file_info['path'],
                         file_name=file_info['name'],
                         thumbnail_path=thumbnail_path,
@@ -219,16 +307,20 @@ class DownloadWorker(QThread):
                         status='success' if success else 'failed',
                         platform=self.platform or "未知平台"
                     )
-            else:
-                # 没有文件信息时也创建记录
-                self.history_manager.add_record(
-                    url=self.url,
-                    title=self.video_title or "未知标题",
-                    status='success' if success else 'failed',
-                    platform=self.platform or "未知平台"
-                )
+            
+            # 更新主记录
+            print(f"正在更新历史记录 ID {self.history_record_id}: {update_data}")
+            result = self.history_manager.update_record(self.history_record_id, **update_data)
+            print(f"历史记录更新结果: {result}")
+            
+            # 发出状态变化信号
+            self.status_changed_signal.emit()
+            print(f"已发出状态变化信号")
+            
         except Exception as e:
-            print(f"保存历史记录时出错: {e}")
+            print(f"更新历史记录时出错: {e}")
+            import traceback
+            traceback.print_exc()
     
     def _extract_thumbnails(self):
         """为下载的视频文件提取缩略图"""
@@ -242,8 +334,13 @@ class DownloadWorker(QThread):
                 # 检查是否为视频文件
                 video_extensions = ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v']
                 if any(file_path.lower().endswith(ext) for ext in video_extensions):
-                    self.progress_signal.emit(f"[{self.task_name}] 正在提取缩略图: {Path(file_path).name}")
-                    self.thumbnail_extractor.extract_thumbnail(file_path)
+                    # 检查缩略图是否已存在
+                    thumbnail_path = self.thumbnail_extractor.get_thumbnail_path(file_path)
+                    if not os.path.exists(thumbnail_path):
+                        self.progress_signal.emit(f"[{self.task_name}] 正在提取缩略图: {Path(file_path).name}")
+                        self.thumbnail_extractor.extract_thumbnail(file_path)
+                    else:
+                        print(f"缩略图已存在，跳过提取: {thumbnail_path}")
         except Exception as e:
             print(f"提取缩略图时出错: {e}")
     
@@ -480,6 +577,9 @@ class UrlTextEdit(QTextEdit):
 class VideoDownloaderGUI(QMainWindow):
     """视频下载器GUI主窗口"""
     
+    # 信号定义
+    history_updated = pyqtSignal()  # 历史记录更新信号
+    
     def __init__(self):
         super().__init__()
         self.download_worker = None
@@ -557,6 +657,9 @@ class VideoDownloaderGUI(QMainWindow):
         # 创建历史记录页面
         self.history_tab = HistoryWidget()
         self.tab_widget.addTab(self.history_tab, "📋 历史记录")
+        
+        # 连接历史记录更新信号
+        self.history_updated.connect(self.history_tab.refresh_history)
         
         main_layout.addWidget(self.tab_widget)
         
@@ -870,6 +973,43 @@ class VideoDownloaderGUI(QMainWindow):
         if not urls:
             QMessageBox.warning(self, "警告", "请输入有效的视频链接！")
             return
+        
+        # 检查重复下载
+        duplicate_urls = []
+        valid_urls = []
+        
+        for url in urls:
+            existing_record = self.history_manager.url_exists(url)
+            if existing_record:
+                status = existing_record.get('status')
+                title = existing_record.get('title', url)
+                if status == 'success':
+                    duplicate_urls.append(f"• {title} (已成功下载)")
+                elif status == 'downloading':
+                    duplicate_urls.append(f"• {title} (正在下载中)")
+                else:
+                    # 失败的记录可以重新下载
+                    valid_urls.append(url)
+            else:
+                valid_urls.append(url)
+        
+        # 如果有重复的URL，询问用户是否继续
+        if duplicate_urls:
+            duplicate_list = "\n".join(duplicate_urls)
+            reply = QMessageBox.question(
+                self, "重复下载检查", 
+                f"检测到以下视频已下载过：\n\n{duplicate_list}\n\n是否仍要继续下载？",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            
+            if reply == QMessageBox.No:
+                if not valid_urls:
+                    return  # 如果没有有效URL，直接返回
+                else:
+                    # 只下载有效的URL
+                    urls = valid_urls
+            # 如果用户选择Yes，则继续下载所有URL
          
         # 初始化任务队列
         self.pending_urls = urls.copy()
@@ -908,6 +1048,78 @@ class VideoDownloaderGUI(QMainWindow):
         self.statusBar().showMessage("正在下载...")
         self.log_message("开始下载任务...")
         
+    def add_download_task(self, url):
+        """添加单个下载任务到输入框"""
+        try:
+            # 获取当前输入框内容
+            current_text = self.url_input.toPlainText().strip()
+            
+            # 如果输入框为空，直接设置URL
+            if not current_text:
+                self.url_input.setPlainText(url)
+            else:
+                # 如果输入框有内容，添加到新行
+                self.url_input.setPlainText(current_text + "\n" + url)
+            
+            # 自动开始下载
+            self.start_download()
+            
+        except Exception as e:
+            print(f"添加下载任务时出错: {e}")
+            QMessageBox.warning(self, "错误", f"添加下载任务失败: {e}")
+    
+    def add_redownload_task(self, url, record_id):
+        """添加重新下载任务，重用现有记录"""
+        try:
+            # 检查是否已有相同URL的下载任务正在进行
+            for worker in self.active_workers:
+                if worker.url == url:
+                    QMessageBox.warning(self, "警告", "该视频正在下载中，请稍后再试")
+                    return
+            
+            # 检查待下载队列中是否已有相同URL
+            if url in self.pending_urls:
+                QMessageBox.warning(self, "警告", "该视频已在下载队列中")
+                return
+            
+            # 获取公共参数
+            token = self._common_token if hasattr(self, '_common_token') else None
+            download_dir = self._common_download_dir if hasattr(self, '_common_download_dir') else self.dir_input.text()
+            
+            # 确保下载目录存在
+            try:
+                Path(download_dir).mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                self.log_message(f"❌ 创建下载目录失败: {e}")
+                return
+            
+            # 创建重新下载任务
+            task_name = f"重新下载-{record_id}"
+            worker = DownloadWorker(url, token, download_dir, task_name, self.history_manager, existing_record_id=record_id)
+            worker.progress_signal.connect(self.update_log)
+            worker.finished_signal.connect(lambda success, message, w=worker: self._on_worker_finished(success, message, w))
+            worker.status_changed_signal.connect(self.history_updated.emit)
+            
+            # 启动任务
+            if len(self.active_workers) < self.max_concurrency:
+                self.active_workers.append(worker)
+                worker.start()
+                self.log_message(f"[{task_name}] 已启动重新下载: {url}")
+            else:
+                self.pending_urls.append(url)
+                self.log_message(f"[{task_name}] 已加入下载队列: {url}")
+            
+            # 启用停止按钮，显示进度条
+            self.stop_btn.setEnabled(True)
+            self.progress_bar.setVisible(True)
+            self.progress_bar.setRange(0, 0)
+            
+            self.statusBar().showMessage("正在下载...")
+            
+        except Exception as e:
+            print(f"添加重新下载任务时出错: {e}")
+            QMessageBox.warning(self, "错误", f"添加重新下载任务失败: {e}")
+        
     def _start_next_workers(self):
         """根据并发上限启动等待中的任务"""
         while self.pending_urls and len(self.active_workers) < self.max_concurrency:
@@ -917,6 +1129,8 @@ class VideoDownloaderGUI(QMainWindow):
             worker.progress_signal.connect(self.update_log)
             # 使用lambda捕获worker引用以便识别
             worker.finished_signal.connect(lambda success, message, w=worker: self._on_worker_finished(success, message, w))
+            # 连接状态变化信号
+            worker.status_changed_signal.connect(self.history_updated.emit)
             self.active_workers.append(worker)
             worker.start()
             self.log_message(f"[{task_name}] 已启动: {url}")
@@ -932,6 +1146,9 @@ class VideoDownloaderGUI(QMainWindow):
         
         self.completed_results.append((success, message))
         self.log_message(message)
+        
+        # 发出历史记录更新信号
+        self.history_updated.emit()
         
         # 若还有待启动任务则继续
         if self.pending_urls:

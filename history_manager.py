@@ -49,10 +49,19 @@ class HistoryManager:
                     status TEXT DEFAULT 'success',
                     platform TEXT,
                     duration TEXT,
+                    error_msg TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            
+            # 检查并添加 error_msg 字段（为了兼容旧数据库）
+            try:
+                cursor.execute("ALTER TABLE download_history ADD COLUMN error_msg TEXT")
+                print("已添加 error_msg 字段到数据库")
+            except sqlite3.OperationalError:
+                # 字段已存在，忽略错误
+                pass
             
             # 创建索引以提高查询性能
             cursor.execute("""
@@ -156,9 +165,14 @@ class HistoryManager:
             if sort_order.upper() not in ['ASC', 'DESC']:
                 sort_order = 'DESC'
             
+            # 使用子查询去重，保留每个URL+文件路径组合的最新记录
             query = f"""
                 SELECT * FROM download_history 
-                {where_clause}
+                WHERE id IN (
+                    SELECT MAX(id) FROM download_history 
+                    {where_clause}
+                    GROUP BY url, COALESCE(file_path, '')
+                )
                 ORDER BY {sort_by} {sort_order}
                 LIMIT ? OFFSET ?
             """
@@ -284,7 +298,7 @@ class HistoryManager:
             return deleted_count
     
     def get_statistics(self) -> Dict:
-        """获取统计信息
+        """获取统计信息（应用去重逻辑）
         
         Returns:
             Dict: 统计信息
@@ -292,22 +306,44 @@ class HistoryManager:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             
-            # 总记录数
-            cursor.execute("SELECT COUNT(*) FROM download_history")
+            # 使用去重逻辑获取统计信息
+            # 总记录数（去重后）
+            cursor.execute("""
+                SELECT COUNT(*) FROM (
+                    SELECT MAX(id) FROM download_history 
+                    GROUP BY url, COALESCE(file_path, '')
+                )
+            """)
             total_count = cursor.fetchone()[0]
             
-            # 成功下载数
-            cursor.execute("SELECT COUNT(*) FROM download_history WHERE status = 'success'")
+            # 成功下载数（去重后）
+            cursor.execute("""
+                SELECT COUNT(*) FROM download_history 
+                WHERE id IN (
+                    SELECT MAX(id) FROM download_history 
+                    GROUP BY url, COALESCE(file_path, '')
+                ) AND status = 'success'
+            """)
             success_count = cursor.fetchone()[0]
             
-            # 总文件大小
-            cursor.execute("SELECT SUM(file_size) FROM download_history WHERE status = 'success'")
+            # 总文件大小（去重后）
+            cursor.execute("""
+                SELECT SUM(file_size) FROM download_history 
+                WHERE id IN (
+                    SELECT MAX(id) FROM download_history 
+                    GROUP BY url, COALESCE(file_path, '')
+                ) AND status = 'success'
+            """)
             total_size = cursor.fetchone()[0] or 0
             
-            # 各平台统计
+            # 各平台统计（去重后）
             cursor.execute("""
                 SELECT platform, COUNT(*) as count 
                 FROM download_history 
+                WHERE id IN (
+                    SELECT MAX(id) FROM download_history 
+                    GROUP BY url, COALESCE(file_path, '')
+                )
                 GROUP BY platform 
                 ORDER BY count DESC
             """)
@@ -331,6 +367,38 @@ class HistoryManager:
             bool: 文件是否存在
         """
         return os.path.exists(file_path) if file_path else False
+    
+    def url_exists(self, url: str) -> Optional[Dict]:
+        """检查URL是否已存在于历史记录中
+        
+        Args:
+            url: 要检查的URL
+            
+        Returns:
+            Optional[Dict]: 如果存在返回记录信息，否则返回None
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT id, url, title, status, download_time, platform
+                FROM download_history 
+                WHERE url = ? 
+                ORDER BY download_time DESC 
+                LIMIT 1
+            """, (url,))
+            
+            row = cursor.fetchone()
+            if row:
+                return {
+                    'id': row[0],
+                    'url': row[1],
+                    'title': row[2],
+                    'status': row[3],
+                    'download_time': row[4],
+                    'platform': row[5]
+                }
+            return None
     
     def get_platforms(self) -> List[str]:
         """获取所有平台列表
