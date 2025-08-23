@@ -15,11 +15,15 @@ from pathlib import Path
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QTextEdit, QLineEdit, QPushButton, 
                              QLabel, QProgressBar, QFileDialog, QMessageBox,
-                             QComboBox, QCheckBox, QGroupBox, QSplitter, QMenu, QAction)
+                             QComboBox, QCheckBox, QGroupBox, QSplitter, QMenu, QAction,
+                             QTabWidget)
 from PyQt5.QtCore import QThread, pyqtSignal, Qt, QTimer, QPoint, QSettings
 from PyQt5.QtGui import QFont, QIcon, QTextCursor, QMouseEvent
 from PyQt5.QtWidgets import QApplication
 from video_downloader import VideoDownloader
+from history_manager import HistoryManager
+from history_widget import HistoryWidget
+from thumbnail_extractor import ThumbnailExtractor
 
 def set_application_icon(app_or_widget=None):
     """
@@ -63,13 +67,20 @@ class DownloadWorker(QThread):
     download_progress_signal = pyqtSignal(int)  # 下载进度信号（保留，当前未精细使用）
     finished_signal = pyqtSignal(bool, str)  # 完成信号
     
-    def __init__(self, url, token=None, download_dir="downloads", task_name=""):
+    def __init__(self, url, token=None, download_dir="downloads", task_name="", history_manager=None):
         super().__init__()
         self.url = url
         self.token = token
         self.download_dir = download_dir
         self.task_name = task_name or url
         self.process = None  # 子进程句柄
+        self.downloaded_files = []  # 存储下载的文件信息
+        self.video_title = None  # 视频标题
+        self.platform = None  # 平台类型
+        self.history_manager = history_manager
+        
+        # 初始化缩略图提取器
+        self.thumbnail_extractor = ThumbnailExtractor()
         
     def run(self):
         """运行下载任务（通过调用子进程执行 video_downloader.py 的一次性下载）"""
@@ -118,7 +129,8 @@ class DownloadWorker(QThread):
                         line = buffer.strip()
                         if line:
                             self.progress_signal.emit(f"[{self.task_name}] {line}")
-                            # 输出解析仅用于展示，不再用于最终成功判断
+                            # 解析下载信息
+                            self._parse_download_info(line)
                         buffer = ''
                     else:
                         buffer += ch
@@ -131,11 +143,139 @@ class DownloadWorker(QThread):
             retcode = self.process.wait()
             final_success = (retcode == 0)
             if final_success:
+                # 提取缩略图
+                self._extract_thumbnails()
+                # 保存历史记录
+                self._save_history_record(True)
                 self.finished_signal.emit(True, f"[{self.task_name}] 下载完成")
             else:
+                # 保存失败记录
+                self._save_history_record(False)
                 self.finished_signal.emit(False, f"[{self.task_name}] 下载失败（退出码 {retcode}）")
         except Exception as e:
+            # 保存异常记录
+            self._save_history_record(False, error_msg=str(e))
             self.finished_signal.emit(False, f"[{self.task_name}] 下载过程中出现错误: {str(e)}")
+    
+    def _parse_download_info(self, line: str):
+        """解析下载信息"""
+        try:
+            # 解析视频标题
+            if "标题:" in line or "Title:" in line:
+                title_match = re.search(r'(?:标题|Title)[:：]\s*(.+)', line)
+                if title_match:
+                    self.video_title = title_match.group(1).strip()
+            
+            # 解析平台信息
+            if "douyin" in line.lower() or "抖音" in line:
+                self.platform = "抖音"
+            elif "bilibili" in line.lower() or "b站" in line or "哔哩哔哩" in line:
+                self.platform = "哔哩哔哩"
+            elif "kuaishou" in line.lower() or "快手" in line:
+                self.platform = "快手"
+            elif "xiaohongshu" in line.lower() or "小红书" in line:
+                self.platform = "小红书"
+            elif "youtube" in line.lower():
+                self.platform = "YouTube"
+            
+            # 解析下载文件路径
+            if "保存到:" in line or "Saved to:" in line or "下载完成:" in line:
+                file_match = re.search(r'(?:保存到|Saved to|下载完成)[:：]\s*(.+)', line)
+                if file_match:
+                    file_path = file_match.group(1).strip()
+                    if os.path.exists(file_path):
+                        file_size = os.path.getsize(file_path)
+                        self.downloaded_files.append({
+                            'path': file_path,
+                            'name': os.path.basename(file_path),
+                            'size': file_size
+                        })
+        except Exception as e:
+            print(f"解析下载信息时出错: {e}")
+    
+    def _save_history_record(self, success: bool, error_msg: str = None):
+        """保存历史记录"""
+        try:
+            if not self.history_manager:
+                return
+                
+            # 如果没有下载文件信息但成功了，尝试从下载目录查找
+            if success and not self.downloaded_files:
+                self._find_downloaded_files()
+            
+            # 为每个下载的文件创建记录
+            if self.downloaded_files:
+                for file_info in self.downloaded_files:
+                    # 获取缩略图路径
+                    thumbnail_path = self.thumbnail_extractor.get_thumbnail_path(file_info['path'])
+                    
+                    self.history_manager.add_record(
+                        url=self.url,
+                        title=self.video_title or "未知标题",
+                        file_path=file_info['path'],
+                        file_name=file_info['name'],
+                        thumbnail_path=thumbnail_path,
+                        file_size=file_info['size'],
+                        status='success' if success else 'failed',
+                        platform=self.platform or "未知平台"
+                    )
+            else:
+                # 没有文件信息时也创建记录
+                self.history_manager.add_record(
+                    url=self.url,
+                    title=self.video_title or "未知标题",
+                    status='success' if success else 'failed',
+                    platform=self.platform or "未知平台"
+                )
+        except Exception as e:
+            print(f"保存历史记录时出错: {e}")
+    
+    def _extract_thumbnails(self):
+        """为下载的视频文件提取缩略图"""
+        try:
+            if not self.downloaded_files:
+                self._find_downloaded_files()
+            
+            # 为每个下载的视频文件提取缩略图
+            for file_info in self.downloaded_files:
+                file_path = file_info['path']
+                # 检查是否为视频文件
+                video_extensions = ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v']
+                if any(file_path.lower().endswith(ext) for ext in video_extensions):
+                    self.progress_signal.emit(f"[{self.task_name}] 正在提取缩略图: {Path(file_path).name}")
+                    self.thumbnail_extractor.extract_thumbnail(file_path)
+        except Exception as e:
+            print(f"提取缩略图时出错: {e}")
+    
+    def _find_downloaded_files(self):
+        """从下载目录查找可能的下载文件"""
+        try:
+            download_path = Path(self.download_dir)
+            if not download_path.exists():
+                return
+            
+            # 获取最近修改的文件（可能是刚下载的）
+            recent_files = []
+            current_time = time.time()
+            
+            for file_path in download_path.rglob('*'):
+                if file_path.is_file():
+                    # 检查文件修改时间（最近5分钟内）
+                    if current_time - file_path.stat().st_mtime < 300:
+                        recent_files.append(file_path)
+            
+            # 按修改时间排序，取最新的
+            recent_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+            
+            for file_path in recent_files[:3]:  # 最多取3个最新文件
+                file_size = file_path.stat().st_size
+                self.downloaded_files.append({
+                    'path': str(file_path),
+                    'name': file_path.name,
+                    'size': file_size
+                })
+        except Exception as e:
+            print(f"查找下载文件时出错: {e}")
         
     def terminate(self):
         """终止任务：终止子进程"""
@@ -350,13 +490,16 @@ class VideoDownloaderGUI(QMainWindow):
         # 初始化QSettings
         self.settings = QSettings("config/app.ini", QSettings.IniFormat)
         
+        # 初始化历史管理器
+        self.history_manager = HistoryManager()
+        
         self.init_ui()
         self.load_settings()  # 加载保存的设置
         
     def init_ui(self):
         """初始化用户界面"""
         self.setWindowTitle("视频解析下载器 v1.1")
-        self.setGeometry(100, 100, 900, 650)
+        self.setGeometry(100, 100, 1000, 700)
         
         # 设置窗口图标
         set_application_icon(self)
@@ -373,6 +516,60 @@ class VideoDownloaderGUI(QMainWindow):
         
         # 创建主布局
         main_layout = QVBoxLayout(central_widget)
+        
+        # 创建Tab控件
+        self.tab_widget = QTabWidget()
+        self.tab_widget.setStyleSheet("""
+            QTabWidget::pane {
+                border: 1px solid #c0c0c0;
+                border-radius: 6px;
+                background-color: white;
+            }
+            QTabWidget::tab-bar {
+                alignment: left;
+            }
+            QTabBar::tab {
+                background-color: #f0f0f0;
+                border: 1px solid #c0c0c0;
+                border-bottom-color: #c0c0c0;
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
+                min-width: 120px;
+                padding: 8px 16px;
+                margin-right: 2px;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            QTabBar::tab:selected {
+                background-color: white;
+                border-bottom-color: white;
+                color: #007bff;
+            }
+            QTabBar::tab:hover {
+                background-color: #e9ecef;
+            }
+        """)
+        
+        # 创建下载页面
+        self.download_tab = self.create_download_tab()
+        self.tab_widget.addTab(self.download_tab, "📥 视频下载")
+        
+        # 创建历史记录页面
+        self.history_tab = HistoryWidget()
+        self.tab_widget.addTab(self.history_tab, "📋 历史记录")
+        
+        main_layout.addWidget(self.tab_widget)
+        
+        # 设置状态栏
+        self.statusBar().showMessage("就绪")
+        
+        # 设置鼠标追踪，用于检测鼠标移动
+        self.setMouseTracking(True)
+        
+    def create_download_tab(self):
+        """创建下载页面"""
+        download_widget = QWidget()
+        main_layout = QVBoxLayout(download_widget)
         
         # # 创建标题
         # title_label = QLabel("视频解析下载器")
@@ -568,11 +765,7 @@ class VideoDownloaderGUI(QMainWindow):
         
         main_layout.addWidget(log_group)
         
-        # 设置状态栏
-        self.statusBar().showMessage("就绪")
-        
-        # 设置鼠标追踪，用于检测鼠标移动
-        self.setMouseTracking(True)
+        return download_widget
         
     def load_settings(self):
         """加载保存的设置"""
@@ -720,7 +913,7 @@ class VideoDownloaderGUI(QMainWindow):
         while self.pending_urls and len(self.active_workers) < self.max_concurrency:
             url = self.pending_urls.pop(0)
             task_name = f"任务{len(self.completed_results) + len(self.active_workers) + 1}"
-            worker = DownloadWorker(url, self._common_token, self._common_download_dir, task_name)
+            worker = DownloadWorker(url, self._common_token, self._common_download_dir, task_name, self.history_manager)
             worker.progress_signal.connect(self.update_log)
             # 使用lambda捕获worker引用以便识别
             worker.finished_signal.connect(lambda success, message, w=worker: self._on_worker_finished(success, message, w))
