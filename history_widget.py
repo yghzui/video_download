@@ -899,18 +899,20 @@ class HistoryWidget(QWidget):
         
     def clear_all_history(self):
         """清空所有历史记录"""
+        # 询问用户是否要重置ID
         reply = QMessageBox.question(
             self, "确认清空", 
-            "确定要清空所有历史记录吗？\n此操作不可撤销！",
+            "确定要清空所有历史记录吗？\n\n选择'Yes'将清空记录并重置ID计数器\n选择'No'取消操作\n\n此操作不可撤销！",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No
         )
         
         if reply == QMessageBox.Yes:
             try:
-                self.history_manager.clear_all_records()
+                # 使用新的清空并重置ID的方法
+                deleted_count = self.history_manager.clear_all_records_and_reset_id()
                 self.refresh_history()
-                QMessageBox.information(self, "成功", "历史记录已清空")
+                QMessageBox.information(self, "成功", f"已清空所有历史记录({deleted_count}条)并重置ID计数器")
             except Exception as e:
                 QMessageBox.warning(self, "错误", f"清空历史记录失败: {e}")
                 

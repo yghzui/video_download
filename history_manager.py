@@ -85,7 +85,8 @@ class HistoryManager:
     def add_record(self, url: str, title: str = None, file_path: str = None, 
                    file_name: str = None, thumbnail_path: str = None, 
                    file_size: int = 0, status: str = 'success', 
-                   platform: str = None, duration: str = None) -> int:
+                   platform: str = None, duration: str = None, 
+                   force_create: bool = False) -> int:
         """添加下载记录
         
         Args:
@@ -98,10 +99,18 @@ class HistoryManager:
             status: 下载状态
             platform: 平台类型
             duration: 视频时长
+            force_create: 是否强制创建新记录（忽略URL重复检查）
             
         Returns:
-            int: 记录ID
+            int: 记录ID，如果URL已存在且force_create=False则返回现有记录ID
         """
+        # 检查URL是否已存在（除非强制创建）
+        if not force_create:
+            existing_record = self.url_exists(url)
+            if existing_record:
+                print(f"URL已存在，返回现有记录ID: {existing_record['id']}")
+                return existing_record['id']
+        
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             
@@ -294,6 +303,30 @@ class HistoryManager:
             
             deleted_count = cursor.rowcount
             conn.commit()
+            
+            return deleted_count
+    
+    def clear_all_records_and_reset_id(self) -> int:
+        """清空所有记录并重置自增ID
+        
+        Returns:
+            int: 删除的记录数量
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # 获取删除前的记录数量
+            cursor.execute("SELECT COUNT(*) FROM download_history")
+            deleted_count = cursor.fetchone()[0]
+            
+            # 删除所有记录
+            cursor.execute("DELETE FROM download_history")
+            
+            # 重置自增ID计数器
+            cursor.execute("DELETE FROM sqlite_sequence WHERE name='download_history'")
+            
+            conn.commit()
+            print(f"已清空所有记录({deleted_count}条)并重置ID计数器")
             
             return deleted_count
     

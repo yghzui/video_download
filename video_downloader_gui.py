@@ -208,13 +208,23 @@ class DownloadWorker(QThread):
             if not self.history_manager:
                 return
                 
+            # 检查URL是否已存在，如果存在则使用现有记录ID
+            existing_record = self.history_manager.url_exists(self.url)
+            if existing_record:
+                print(f"URL已存在，使用现有记录ID: {existing_record['id']}")
+                self.history_record_id = existing_record['id']
+                # 更新现有记录状态为downloading
+                self._update_existing_record_status()
+                return
+                
             # 创建初始记录，状态为downloading
             self.history_record_id = self.history_manager.add_record(
                 url=self.url,
                 title=self.task_name,  # 使用任务名作为初始标题
                 status='downloading',
                 platform="检测中...",
-                thumbnail_path="thumbnails/default_thumb.jpg"  # 使用默认缩略图
+                thumbnail_path="thumbnails/default_thumb.jpg",  # 使用默认缩略图
+                force_create=False  # 不强制创建，遵循URL唯一性
             )
             
             # 发出状态变化信号
