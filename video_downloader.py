@@ -75,12 +75,16 @@ class VideoDownloader:
         Returns:
             str: 提取的URL，如果没有找到则返回None
         """
-        # 匹配HTTP/HTTPS链接的正则表达式
-        url_pattern = r'https?://[^\s,，]+'
+        # 匹配HTTP/HTTPS链接的正则表达式，排除常见的分隔符和标点符号
+        url_pattern = r'https?://[^\s,，`\'"\]\)\}]+'
         matches = re.findall(url_pattern, text)
         
         if matches:
-            return matches[0]
+            # 清理URL末尾可能的标点符号
+            url = matches[0]
+            # 移除末尾的标点符号
+            url = url.rstrip('`\'"\]\)\}.,;:!?')
+            return url
         return None
     
     def identify_platform(self, url):

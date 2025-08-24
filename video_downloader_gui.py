@@ -1080,14 +1080,24 @@ class VideoDownloaderGUI(QMainWindow):
     def add_redownload_task(self, url, record_id):
         """添加重新下载任务，重用现有记录"""
         try:
+            # 从原始URL文本中提取纯净的URL
+            from video_downloader import VideoDownloader
+            temp_downloader = VideoDownloader()
+            extracted_url = temp_downloader.extract_url(url)
+            
+            if not extracted_url:
+                QMessageBox.warning(self, "错误", "无法从记录中提取有效的URL链接")
+                return
+            
+            # 使用提取后的URL进行后续检查
             # 检查是否已有相同URL的下载任务正在进行
             for worker in self.active_workers:
-                if worker.url == url:
+                if worker.url == extracted_url:
                     QMessageBox.warning(self, "警告", "该视频正在下载中，请稍后再试")
                     return
             
             # 检查待下载队列中是否已有相同URL
-            if url in self.pending_urls:
+            if extracted_url in self.pending_urls:
                 QMessageBox.warning(self, "警告", "该视频已在下载队列中")
                 return
             
@@ -1104,7 +1114,7 @@ class VideoDownloaderGUI(QMainWindow):
             
             # 创建重新下载任务
             task_name = f"重新下载-{record_id}"
-            worker = DownloadWorker(url, token, download_dir, task_name, self.history_manager, existing_record_id=record_id)
+            worker = DownloadWorker(extracted_url, token, download_dir, task_name, self.history_manager, existing_record_id=record_id)
             worker.progress_signal.connect(self.update_log)
             worker.finished_signal.connect(lambda success, message, w=worker: self._on_worker_finished(success, message, w))
             worker.status_changed_signal.connect(self.history_updated.emit)
@@ -1113,10 +1123,10 @@ class VideoDownloaderGUI(QMainWindow):
             if len(self.active_workers) < self.max_concurrency:
                 self.active_workers.append(worker)
                 worker.start()
-                self.log_message(f"[{task_name}] 已启动重新下载: {url}")
+                self.log_message(f"[{task_name}] 已启动重新下载: {extracted_url}")
             else:
-                self.pending_urls.append(url)
-                self.log_message(f"[{task_name}] 已加入下载队列: {url}")
+                self.pending_urls.append(extracted_url)
+                self.log_message(f"[{task_name}] 已加入下载队列: {extracted_url}")
             
             # 启用停止按钮，显示进度条
             self.stop_btn.setEnabled(True)
