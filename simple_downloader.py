@@ -175,15 +175,25 @@ def sanitize_filename(filename):
         str: 清理后的文件名
     """
     import re
+    # 首先移除所有换行符、制表符等空白字符
+    safe_name = re.sub(r'[\r\n\t\f\v]', '', filename)
+    
     # Windows文件系统不允许的字符
     illegal_chars = r'[<>:"/\\|?*]'
     # 替换为下划线
-    safe_name = re.sub(illegal_chars, '_', filename)
+    safe_name = re.sub(illegal_chars, '_', safe_name)
+    
     # 移除首尾空格和点
     safe_name = safe_name.strip(' .')
+    
+    # 如果文件名为空或只有空格，使用默认名称
+    if not safe_name or safe_name.isspace():
+        safe_name = 'untitled'
+    
     # 限制长度（Windows路径限制）
     if len(safe_name) > 200:
         safe_name = safe_name[:200]
+    
     return safe_name
 
 def main():
@@ -212,4 +222,4 @@ def main():
         print("-" * 40)
 
 if __name__ == "__main__":
-    main() 
+    main()
