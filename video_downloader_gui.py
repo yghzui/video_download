@@ -192,13 +192,18 @@ class DownloadWorker(QThread):
                 file_match = re.search(r'(?:保存到|Saved to|下载完成)[:：]\s*(.+)', line)
                 if file_match:
                     file_path = file_match.group(1).strip()
-                    if os.path.exists(file_path):
+                    # 验证是否为有效的文件路径，而不是URL链接
+                    if (os.path.exists(file_path) and 
+                        not file_path.startswith(('http://', 'https://')) and
+                        os.path.isfile(file_path)):
                         file_size = os.path.getsize(file_path)
                         self.downloaded_files.append({
                             'path': file_path,
                             'name': os.path.basename(file_path),
                             'size': file_size
                         })
+                    else:
+                        print(f"跳过无效的文件路径: {file_path}")
         except Exception as e:
             print(f"解析下载信息时出错: {e}")
     
@@ -275,12 +280,14 @@ class DownloadWorker(QThread):
             # 如果下载失败，添加错误信息
             if not success:
                 update_data['error_msg'] = error_msg or "下载失败"
+                # 下载失败时，清空可能错误解析的文件信息，避免将URL当作文件路径保存
+                self.downloaded_files = []
             else:
                 # 成功时清除错误信息
                 update_data['error_msg'] = None
             
-            # 如果有下载文件，更新第一个文件的信息
-            if self.downloaded_files:
+            # 只有在下载成功且有下载文件时，才更新文件信息
+            if success and self.downloaded_files:
                 file_info = self.downloaded_files[0]  # 取第一个文件
                 # 实际提取缩略图
                 thumbnail_path = None

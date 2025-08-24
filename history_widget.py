@@ -1040,24 +1040,38 @@ class HistoryWidget(QWidget):
     def redownload(self, url, record_id):
         """重新下载"""
         try:
+            print(f"[DEBUG] 重新下载被调用: URL={url}, Record ID={record_id}")
+            
             # 获取主窗口的下载功能
             main_window = self.parent()
-            while main_window and not hasattr(main_window, 'add_redownload_task'):
+            search_count = 0
+            while main_window and not hasattr(main_window, 'add_redownload_task') and search_count < 10:
+                print(f"[DEBUG] 搜索主窗口，当前组件: {type(main_window).__name__}")
                 main_window = main_window.parent()
+                search_count += 1
             
             if main_window and hasattr(main_window, 'add_redownload_task'):
+                print(f"[DEBUG] 找到主窗口: {type(main_window).__name__}")
+                
                 # 切换到下载页面
                 if hasattr(main_window, 'tab_widget'):
+                    print(f"[DEBUG] 切换到下载页面")
                     main_window.tab_widget.setCurrentIndex(0)  # 假设下载页面是第一个标签页
                 
                 # 添加重新下载任务
+                print(f"[DEBUG] 调用 add_redownload_task")
                 main_window.add_redownload_task(url, record_id)
+                print(f"[DEBUG] 重新下载任务添加成功")
                 QMessageBox.information(self, "成功", "已添加到下载队列")
             else:
+                print(f"[DEBUG] 无法找到主窗口或add_redownload_task方法")
                 QMessageBox.warning(self, "错误", "无法找到下载功能")
                 
         except Exception as e:
             print(f"重新下载时出错: {e}")
+            import traceback
+            traceback.print_exc()
+            QMessageBox.critical(self, "错误", f"重新下载失败: {str(e)}")
     
     def rename_file(self, record_id, new_name):
         """重命名文件"""
