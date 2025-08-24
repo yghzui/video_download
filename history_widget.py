@@ -966,9 +966,18 @@ class HistoryWidget(QWidget):
         
         if reply == QMessageBox.Yes:
             try:
+                # 删除数据库记录
                 self.history_manager.delete_record(record_id)
+                
+                # 立即刷新界面
                 self.refresh_history()
-                QMessageBox.information(self, "成功", "记录已删除")
+                
+                # 强制处理所有待处理的事件，确保界面立即更新
+                QApplication.processEvents()
+                
+                # 使用QTimer延迟显示成功消息，避免阻塞界面刷新
+                QTimer.singleShot(100, lambda: QMessageBox.information(self, "成功", "记录已删除"))
+                
             except Exception as e:
                 QMessageBox.warning(self, "错误", f"删除记录失败: {e}")
                 

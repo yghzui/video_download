@@ -230,11 +230,12 @@ class DownloadWorker(QThread):
                 return
                 
             # 更新现有记录状态为downloading
-            self.history_manager.update_record(self.history_record_id, {
-                'status': 'downloading',
-                'download_time': time.strftime('%Y-%m-%d %H:%M:%S'),
-                'error_msg': None  # 清除之前的错误信息
-            })
+            self.history_manager.update_record(
+                self.history_record_id,
+                status='downloading',
+                download_time=time.strftime('%Y-%m-%d %H:%M:%S'),
+                error_msg=None  # 清除之前的错误信息
+            )
             
             # 发出状态变化信号
             self.status_changed_signal.emit()
