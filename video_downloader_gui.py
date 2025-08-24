@@ -436,7 +436,7 @@ class UrlTextEdit(QTextEdit):
         self.clear_btn.clicked.connect(self._clear_content)
         
         # 粘贴并下载按钮
-        self.paste_download_btn = QPushButton("📋↓", self)
+        self.paste_download_btn = QPushButton("↓", self)
         self.paste_download_btn.setFixedSize(20, 20)
         self.paste_download_btn.setToolTip("粘贴剪切板内容并开始下载")
         self.paste_download_btn.setStyleSheet("""
@@ -445,7 +445,7 @@ class UrlTextEdit(QTextEdit):
                 color: white;
                 border: none;
                 border-radius: 10px;
-                font-size: 10px;
+                font-size: 14px;
                 font-weight: bold;
             }
             QPushButton:hover {
