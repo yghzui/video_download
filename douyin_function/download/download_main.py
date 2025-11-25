@@ -421,7 +421,7 @@ def download_requests_job(job, headers, retry, stats, lock, history_path):
         })
     return ok
 
-def run_downloader(url_or_id, save_dir, name_format, threads, retry, mode='requests', aria2_host='127.0.0.1', aria2_port=6800, aria2_secret='', cookie_path=os.path.join('douyin_function', 'config', 'cookie.json'), host_index=1, persist=True, debug_port=9223, login_wait_ms=60000, export_only=False, scroll_idle_max=10, scroll_interval_ms=2000, archive_by_author_id=False, archive_by_handle=False, date_limit='', aria2_max_conn=16, aria2_split=16, aria2_min_split_size='1M'):
+def run_downloader(url_or_id, save_dir, name_format, threads, retry, mode='requests', aria2_host='127.0.0.1', aria2_port=6800, aria2_secret='', cookie_path=os.path.join('douyin_function', 'config', 'cookie.json'), host_index=1, persist=True, debug_port=9223, login_wait_ms=60000, export_only=False, scroll_idle_max=10, scroll_interval_ms=2000, archive_by_author_id=False, archive_by_handle=False, date_limit='', aria2_max_conn=16, aria2_split=16, aria2_min_split_size='1M', show_browser=True):
     os.makedirs(save_dir, exist_ok=True)
     cookie_header, cookies = parse_cookie_file(cookie_path)
     ensure_project_chromium()
@@ -477,10 +477,11 @@ def run_downloader(url_or_id, save_dir, name_format, threads, retry, mode='reque
         args_list = []
         if debug_port and int(debug_port) > 0:
             args_list.append(f"--remote-debugging-port={int(debug_port)}")
+        headless = not bool(show_browser)
         if persist:
-            context = p.chromium.launch_persistent_context(user_data_dir, headless=False, user_agent=UA, args=args_list or None)
+            context = p.chromium.launch_persistent_context(user_data_dir, headless=headless, user_agent=UA, args=args_list or None)
         else:
-            browser = p.chromium.launch(headless=False, args=args_list or None)
+            browser = p.chromium.launch(headless=headless, args=args_list or None)
             context = browser.new_context(user_agent=UA, extra_http_headers={'Cookie': cookie_header} if cookie_header else None)
         if cookies:
             try:
@@ -730,8 +731,9 @@ def main():
     parser.add_argument('--archive_by_author_id', type=int, default=1, help='按作者唯一ID归档到子目录')
     parser.add_argument('--archive_by_handle', type=int, default=0, help='按作者抖音号归档到子目录')
     parser.add_argument('--date_limit', default='', help='日期控制：空=全部；0=最近一天；YYYYMMDD=提取到该日期为止；扩展：Nd/Nw/Nm/NY 表示最近N天/周/月/年')
+    parser.add_argument('--show_browser', type=int, default=1, help='是否显示浏览器窗口')
     args = parser.parse_args()
-    run_downloader(args.url_or_id, args.save_dir, args.name_format, args.threads, args.retry, mode=args.mode, aria2_host=args.aria2_host, aria2_port=args.aria2_port, aria2_secret=args.aria2_secret, persist=bool(args.persist), debug_port=args.debug_port, login_wait_ms=args.login_wait_ms, export_only=bool(args.export_only), scroll_idle_max=args.scroll_idle_max, scroll_interval_ms=args.scroll_interval_ms, archive_by_author_id=bool(args.archive_by_author_id), archive_by_handle=bool(args.archive_by_handle), date_limit=args.date_limit, aria2_max_conn=args.aria2_max_conn, aria2_split=args.aria2_split, aria2_min_split_size=args.aria2_min_split_size)
+    run_downloader(args.url_or_id, args.save_dir, args.name_format, args.threads, args.retry, mode=args.mode, aria2_host=args.aria2_host, aria2_port=args.aria2_port, aria2_secret=args.aria2_secret, persist=bool(args.persist), debug_port=args.debug_port, login_wait_ms=args.login_wait_ms, export_only=bool(args.export_only), scroll_idle_max=args.scroll_idle_max, scroll_interval_ms=args.scroll_interval_ms, archive_by_author_id=bool(args.archive_by_author_id), archive_by_handle=bool(args.archive_by_handle), date_limit=args.date_limit, aria2_max_conn=args.aria2_max_conn, aria2_split=args.aria2_split, aria2_min_split_size=args.aria2_min_split_size, show_browser=bool(args.show_browser))
 
 if __name__ == '__main__':
     main()
