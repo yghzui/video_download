@@ -492,18 +492,22 @@ def run_downloader(url_or_id, save_dir, name_format, threads, retry, mode='reque
             for it in items:
                 if not it.get('author_handle'):
                     it['author_handle'] = dom_handle
-        if archive_by_author_id:
-            aid = extract_author_id(items, url)
-            if aid:
-                save_dir = os.path.join(save_dir, aid)
-                os.makedirs(save_dir, exist_ok=True)
+        subdir = None
         if archive_by_handle:
-            handle = dom_handle
-            if not handle and url_or_id and not url_or_id.startswith('http'):
-                handle = url_or_id
-            if handle:
-                save_dir = os.path.join(save_dir, handle)
-                os.makedirs(save_dir, exist_ok=True)
+            h = dom_handle if dom_handle else (url_or_id if (url_or_id and not url_or_id.startswith('http')) else '')
+            if h:
+                subdir = h
+        elif archive_by_author_id:
+            h = dom_handle if dom_handle else (url_or_id if (url_or_id and not url_or_id.startswith('http')) else '')
+            if h:
+                subdir = h
+            else:
+                aid = extract_author_id(items, url)
+                if aid:
+                    subdir = aid
+        if subdir:
+            save_dir = os.path.join(save_dir, subdir)
+            os.makedirs(save_dir, exist_ok=True)
         cookie_used = cookie_header
         headers = {
             'User-Agent': UA,
@@ -711,7 +715,7 @@ def main():
     parser.add_argument('--scroll_interval_ms', type=int, default=2000, help='滚动间隔毫秒')
     parser.add_argument('--archive_by_author_id', type=int, default=1, help='按作者唯一ID归档到子目录')
     parser.add_argument('--archive_by_handle', type=int, default=0, help='按作者抖音号归档到子目录')
-    parser.add_argument('--date_limit', default='3d', help='日期控制：空=全部；0=最近一天；YYYYMMDD=提取到该日期为止；扩展：Nd/Nw/Nm/NY 表示最近N天/周/月/年')
+    parser.add_argument('--date_limit', default='', help='日期控制：空=全部；0=最近一天；YYYYMMDD=提取到该日期为止；扩展：Nd/Nw/Nm/NY 表示最近N天/周/月/年')
     args = parser.parse_args()
     run_downloader(args.url_or_id, args.save_dir, args.name_format, args.threads, args.retry, mode=args.mode, aria2_host=args.aria2_host, aria2_port=args.aria2_port, aria2_secret=args.aria2_secret, persist=bool(args.persist), debug_port=args.debug_port, login_wait_ms=args.login_wait_ms, export_only=bool(args.export_only), scroll_idle_max=args.scroll_idle_max, scroll_interval_ms=args.scroll_interval_ms, archive_by_author_id=bool(args.archive_by_author_id), archive_by_handle=bool(args.archive_by_handle), date_limit=args.date_limit)
 
