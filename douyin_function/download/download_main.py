@@ -696,25 +696,6 @@ def main():
     #                      优先从页面 DOM 提取“抖音号：”文本，其次响应。
     parser.add_argument('--url_or_id', default='https://www.douyin.com/user/MS4wLjABAAAALK15ylKOfoJpXG8Z61u5nxxDkqS5eznbA_8wWZgPPfU?from_tab_name=main&relation=1&vid=7575851370537245625', help='抖音主页链接或作者唯一ID/抖音号')
     parser.add_argument('--save_dir', default=os.path.join(os.getcwd(), 'downloads/douyin_test'), help='保存根目录')
-    # name_format 示例与可用变量
-    # 可用变量: {发布者} {标题} {id} {i} {抖音号} {时间}
-    # 说明:
-    # - {发布者}: 作者昵称
-    # - {标题}: 作品标题
-    # - {id}: 作品ID
-    # - {i}: 当前会话内的顺序编号(从1递增)
-    # 特别说明: 文件名会进行安全替换，特殊字符会被替换为全角或安全字符
-    # 示例（以作者“笨蛋小熊”、标题“#浅跳一下#甜妹”、ID“7536958092299259193”为例）：
-    # 1) 【{发布者}】{标题}({id})
-    #    输出: 【笨蛋小熊】#浅跳一下#甜妹（7536958092299259193）
-    # 2) {发布者}-{id}
-    #    输出: 笨蛋小熊-7536958092299259193
-    # 3) {i}_{标题}
-    #    输出: 1_#浅跳一下#甜妹
-    # 4) {发布者}_{标题}_{id}
-    #    输出: 笨蛋小熊_#浅跳一下#甜妹_7536958092299259193
-    # 5) {标题}（{发布者}）
-    #    输出: #浅跳一下#甜妹（笨蛋小熊）
     parser.add_argument('--name_format', default='【{发布者}/{抖音号}】{时间}_{i}_{标题}({id})', help='文件命名模板，支持 {发布者} {标题} {id} {i} {抖音号} {时间}')
     parser.add_argument('--threads', type=int, default=4, help='并发下载线程数')
     parser.add_argument('--retry', type=int, default=3, help='单资源失败重试次数')
