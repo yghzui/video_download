@@ -191,10 +191,21 @@ def download_requests(url, path, headers, retry):
         time.sleep(1)
     return False
 
-def download_aria2(url, name, save_dir, headers, host='127.0.0.1', port=6800, secret=''):
+def download_aria2(url, name, save_dir, headers, host='127.0.0.1', port=6800, secret='', max_conn=None, split=None, min_split_size=None):
     rpc = f'http://{host}:{port}/jsonrpc'
     hdr = [f'{k}: {v}' for k, v in headers.items()]
-    params = [[url], {'dir': save_dir, 'out': name, 'header': hdr}]
+    opts = {'dir': save_dir, 'out': name, 'header': hdr}
+    if max_conn:
+        opts['max-connection-per-server'] = str(int(max_conn))
+    if split:
+        opts['split'] = str(int(split))
+    if min_split_size:
+        opts['min-split-size'] = str(min_split_size)
+    opts['continue'] = 'true'
+    opts['allow-overwrite'] = 'true'
+    opts['auto-file-renaming'] = 'false'
+    opts['check-certificate'] = 'false'
+    params = [[url], opts]
     if secret:
         params.insert(0, f'token:{secret}')
     payload = {'jsonrpc': '2.0', 'id': name, 'method': 'aria2.addUri', 'params': params}
@@ -410,7 +421,7 @@ def download_requests_job(job, headers, retry, stats, lock, history_path):
         })
     return ok
 
-def run_downloader(url_or_id, save_dir, name_format, threads, retry, mode='requests', aria2_host='127.0.0.1', aria2_port=6800, aria2_secret='', cookie_path=os.path.join('douyin_function', 'config', 'cookie.json'), host_index=1, persist=True, debug_port=9223, login_wait_ms=60000, export_only=False, scroll_idle_max=10, scroll_interval_ms=2000, archive_by_author_id=False, archive_by_handle=False, date_limit=''):
+def run_downloader(url_or_id, save_dir, name_format, threads, retry, mode='requests', aria2_host='127.0.0.1', aria2_port=6800, aria2_secret='', cookie_path=os.path.join('douyin_function', 'config', 'cookie.json'), host_index=1, persist=True, debug_port=9223, login_wait_ms=60000, export_only=False, scroll_idle_max=10, scroll_interval_ms=2000, archive_by_author_id=False, archive_by_handle=False, date_limit='', aria2_max_conn=16, aria2_split=16, aria2_min_split_size='1M'):
     os.makedirs(save_dir, exist_ok=True)
     cookie_header, cookies = parse_cookie_file(cookie_path)
     ensure_project_chromium()
@@ -579,7 +590,7 @@ def run_downloader(url_or_id, save_dir, name_format, threads, retry, mode='reque
         if mode == 'aria2c':
             gid_to_job = {}
             for j in jobs:
-                gid = download_aria2(j['url'], j['name'], save_dir, headers, host=aria2_host, port=aria2_port, secret=aria2_secret)
+                gid = download_aria2(j['url'], j['name'], save_dir, headers, host=aria2_host, port=aria2_port, secret=aria2_secret, max_conn=aria2_max_conn, split=aria2_split, min_split_size=aria2_min_split_size)
                 if not gid:
                     ok = download_requests_job(j, headers, retry, stats, lock, history_path)
                     results.append(ok)
@@ -707,6 +718,9 @@ def main():
     parser.add_argument('--aria2_host', default='127.0.0.1', help='aria2c RPC 主机')
     parser.add_argument('--aria2_port', type=int, default=6800, help='aria2c RPC 端口')
     parser.add_argument('--aria2_secret', default='', help='aria2c RPC 密钥')
+    parser.add_argument('--aria2_max_conn', type=int, default=16, help='aria2c 单文件每服务器最大连接数')
+    parser.add_argument('--aria2_split', type=int, default=16, help='aria2c 单文件切分数')
+    parser.add_argument('--aria2_min_split_size', default='1M', help='aria2c 最小分片大小')
     parser.add_argument('--persist', type=int, default=1, help='是否使用持久化浏览器上下文')
     parser.add_argument('--debug_port', type=int, default=9223, help='浏览器远程调试端口')
     parser.add_argument('--login_wait_ms', type=int, default=5000, help='登录等待时间（毫秒）')
@@ -717,7 +731,7 @@ def main():
     parser.add_argument('--archive_by_handle', type=int, default=0, help='按作者抖音号归档到子目录')
     parser.add_argument('--date_limit', default='', help='日期控制：空=全部；0=最近一天；YYYYMMDD=提取到该日期为止；扩展：Nd/Nw/Nm/NY 表示最近N天/周/月/年')
     args = parser.parse_args()
-    run_downloader(args.url_or_id, args.save_dir, args.name_format, args.threads, args.retry, mode=args.mode, aria2_host=args.aria2_host, aria2_port=args.aria2_port, aria2_secret=args.aria2_secret, persist=bool(args.persist), debug_port=args.debug_port, login_wait_ms=args.login_wait_ms, export_only=bool(args.export_only), scroll_idle_max=args.scroll_idle_max, scroll_interval_ms=args.scroll_interval_ms, archive_by_author_id=bool(args.archive_by_author_id), archive_by_handle=bool(args.archive_by_handle), date_limit=args.date_limit)
+    run_downloader(args.url_or_id, args.save_dir, args.name_format, args.threads, args.retry, mode=args.mode, aria2_host=args.aria2_host, aria2_port=args.aria2_port, aria2_secret=args.aria2_secret, persist=bool(args.persist), debug_port=args.debug_port, login_wait_ms=args.login_wait_ms, export_only=bool(args.export_only), scroll_idle_max=args.scroll_idle_max, scroll_interval_ms=args.scroll_interval_ms, archive_by_author_id=bool(args.archive_by_author_id), archive_by_handle=bool(args.archive_by_handle), date_limit=args.date_limit, aria2_max_conn=args.aria2_max_conn, aria2_split=args.aria2_split, aria2_min_split_size=args.aria2_min_split_size)
 
 if __name__ == '__main__':
     main()
