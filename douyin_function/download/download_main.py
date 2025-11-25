@@ -12,7 +12,8 @@ from datetime import datetime, timedelta
 import sys
 import shutil
 import subprocess
-
+import calendar
+import re as _re
 PATTERNS = [
     re.compile(r'https://(.*?).douyin.com/aweme/v1/web/aweme/post/'),
     re.compile(r'https://www.douyin.com/aweme/v1/web/general/search/single/'),
@@ -95,7 +96,7 @@ def parse_douyin_item(data, host_index=1):
             'publish_time': publish_str,
             'publish_ts': create_time}
 
-def collect_items(page, host_index=1):
+def collect_items(page, host_index=1, control=None):
     items = []
     def handle_response(response):
         url = response.url
@@ -126,15 +127,38 @@ def collect_items(page, host_index=1):
             if not d:
                 continue
             item = parse_douyin_item(d, host_index=host_index)
-            if item.get('id') and not any(x['id'] == item['id'] for x in items):
+            allow = True
+            if control:
+                th = control.get('threshold_ts')
+                last_day = bool(control.get('last_day'))
+                stop_on_older = bool(control.get('stop_on_older'))
+                ts = item.get('publish_ts')
+                if th is not None:
+                    if ts is None or ts < th:
+                        allow = False
+                        if stop_on_older:
+                            control['stop'] = True
+                    else:
+                        allow = True
+                elif last_day:
+                    now_th = int(time.time()) - 86400
+                    if ts is None or ts < now_th:
+                        allow = False
+                        if stop_on_older:
+                            control['stop'] = True
+                    else:
+                        allow = True
+            if allow and item.get('id') and not any(x['id'] == item['id'] for x in items):
                 items.append(item)
     page.on('response', handle_response)
     return items
 
-def autoscroll(page, items, max_idle=10, interval_ms=2000, container_selector='.route-scroll-container'):
+def autoscroll(page, items, max_idle=10, interval_ms=2000, container_selector='.route-scroll-container', control=None):
     idle = 0
     last = 0
     while idle < max_idle:
+        if control and control.get('stop'):
+            break
         container = None
         try:
             container = page.query_selector(container_selector)
@@ -386,10 +410,56 @@ def download_requests_job(job, headers, retry, stats, lock, history_path):
         })
     return ok
 
-def run_downloader(url_or_id, save_dir, name_format, threads, retry, mode='requests', aria2_host='127.0.0.1', aria2_port=6800, aria2_secret='', cookie_path=os.path.join('douyin_function', 'config', 'cookie.json'), host_index=1, persist=True, debug_port=9223, login_wait_ms=60000, export_only=False, scroll_idle_max=10, scroll_interval_ms=2000, archive_by_author_id=False, archive_by_handle=False):
+def run_downloader(url_or_id, save_dir, name_format, threads, retry, mode='requests', aria2_host='127.0.0.1', aria2_port=6800, aria2_secret='', cookie_path=os.path.join('douyin_function', 'config', 'cookie.json'), host_index=1, persist=True, debug_port=9223, login_wait_ms=60000, export_only=False, scroll_idle_max=10, scroll_interval_ms=2000, archive_by_author_id=False, archive_by_handle=False, date_limit=''):
     os.makedirs(save_dir, exist_ok=True)
     cookie_header, cookies = parse_cookie_file(cookie_path)
     ensure_project_chromium()
+    def parse_date_limit(val):
+        s = (val or '').strip()
+        if s == '':
+            return {'threshold_ts': None, 'last_day': False, 'stop_on_older': False, 'stop': False}
+        if s == '0':
+            th = int(time.time()) - 86400
+            return {'threshold_ts': th, 'last_day': True, 'stop_on_older': True, 'stop': False}
+        if len(s) == 8 and s.isdigit():
+            y = int(s[0:4]); m = int(s[4:6]); d = int(s[6:8])
+            dt_utc = datetime(y, m, d) - timedelta(hours=8)
+            th = calendar.timegm(dt_utc.timetuple())
+            return {'threshold_ts': th, 'last_day': False, 'stop_on_older': True, 'stop': False}
+        m = _re.match(r"^(\d+)\s*([dDwWmMyY]|Y)$", s)
+        if m:
+            n = int(m.group(1))
+            u = m.group(2).lower()
+            bjt_now = datetime.utcnow() + timedelta(hours=8)
+            def bjt_to_epoch(dt_bjt):
+                return calendar.timegm((dt_bjt - timedelta(hours=8)).timetuple())
+            def sub_months(dt_bjt, months):
+                y = dt_bjt.year
+                mth = dt_bjt.month - months
+                while mth <= 0:
+                    y -= 1
+                    mth += 12
+                last_day = calendar.monthrange(y, mth)[1]
+                day = min(dt_bjt.day, last_day)
+                return datetime(y, mth, day, dt_bjt.hour, dt_bjt.minute, dt_bjt.second)
+            def sub_years(dt_bjt, years):
+                y = dt_bjt.year - years
+                mth = dt_bjt.month
+                last_day = calendar.monthrange(y, mth)[1]
+                day = min(dt_bjt.day, last_day)
+                return datetime(y, mth, day, dt_bjt.hour, dt_bjt.minute, dt_bjt.second)
+            if u == 'd':
+                dt_bjt = bjt_now - timedelta(days=n)
+            elif u == 'w':
+                dt_bjt = bjt_now - timedelta(days=7*n)
+            elif u == 'm':
+                dt_bjt = sub_months(bjt_now, n)
+            else:  # 'y' or 'Y'
+                dt_bjt = sub_years(bjt_now, n)
+            th = bjt_to_epoch(dt_bjt)
+            return {'threshold_ts': th, 'last_day': False, 'stop_on_older': True, 'stop': False}
+        return {'threshold_ts': None, 'last_day': False, 'stop_on_older': False, 'stop': False}
+    control = parse_date_limit(date_limit)
     with sync_playwright() as p:
         user_data_dir = os.path.join('douyin_function', 'cache', 'playwright_profile')
         os.makedirs(user_data_dir, exist_ok=True)
@@ -407,7 +477,7 @@ def run_downloader(url_or_id, save_dir, name_format, threads, retry, mode='reque
             except Exception:
                 pass
         page = context.new_page()
-        items = collect_items(page, host_index=host_index)
+        items = collect_items(page, host_index=host_index, control=control)
         if url_or_id.startswith('http'):
             url = url_or_id
         else:
@@ -415,7 +485,7 @@ def run_downloader(url_or_id, save_dir, name_format, threads, retry, mode='reque
         page.goto(url, wait_until='domcontentloaded')
         if login_wait_ms and int(login_wait_ms) > 0:
             page.wait_for_timeout(int(login_wait_ms))
-        autoscroll(page, items, max_idle=int(scroll_idle_max), interval_ms=int(scroll_interval_ms))
+        autoscroll(page, items, max_idle=int(scroll_idle_max), interval_ms=int(scroll_interval_ms), control=control)
         time.sleep(3)
         dom_handle = extract_author_handle_from_dom(page)
         if dom_handle:
@@ -658,10 +728,11 @@ def main():
     parser.add_argument('--export_only', type=int, default=0, help='仅导出直链不下载')
     parser.add_argument('--scroll_idle_max', type=int, default=10, help='滚动采集最大空闲轮数')
     parser.add_argument('--scroll_interval_ms', type=int, default=2000, help='滚动间隔毫秒')
-    parser.add_argument('--archive_by_author_id', type=int, default=0, help='按作者唯一ID归档到子目录')
+    parser.add_argument('--archive_by_author_id', type=int, default=1, help='按作者唯一ID归档到子目录')
     parser.add_argument('--archive_by_handle', type=int, default=0, help='按作者抖音号归档到子目录')
+    parser.add_argument('--date_limit', default='3d', help='日期控制：空=全部；0=最近一天；YYYYMMDD=提取到该日期为止；扩展：Nd/Nw/Nm/NY 表示最近N天/周/月/年')
     args = parser.parse_args()
-    run_downloader(args.url_or_id, args.save_dir, args.name_format, args.threads, args.retry, mode=args.mode, aria2_host=args.aria2_host, aria2_port=args.aria2_port, aria2_secret=args.aria2_secret, persist=bool(args.persist), debug_port=args.debug_port, login_wait_ms=args.login_wait_ms, export_only=bool(args.export_only), scroll_idle_max=args.scroll_idle_max, scroll_interval_ms=args.scroll_interval_ms, archive_by_author_id=bool(args.archive_by_author_id), archive_by_handle=bool(args.archive_by_handle))
+    run_downloader(args.url_or_id, args.save_dir, args.name_format, args.threads, args.retry, mode=args.mode, aria2_host=args.aria2_host, aria2_port=args.aria2_port, aria2_secret=args.aria2_secret, persist=bool(args.persist), debug_port=args.debug_port, login_wait_ms=args.login_wait_ms, export_only=bool(args.export_only), scroll_idle_max=args.scroll_idle_max, scroll_interval_ms=args.scroll_interval_ms, archive_by_author_id=bool(args.archive_by_author_id), archive_by_handle=bool(args.archive_by_handle), date_limit=args.date_limit)
 
 if __name__ == '__main__':
     main()
